@@ -1,0 +1,21 @@
+{
+    "name": "Banner de Perfil",
+    "description": "Banner Topo de Perfil ",
+    "version": "1.0.0",
+    "author": "Bio6 by LGW.one",
+    "type": "page",
+    "requires_migration": true,
+    "integration_type": "independent_page",
+    "files": {
+        "controller": "ProfileBannerController.php",
+        "view": "banner.blade.php",
+        "routes": "profile_banner_routes.php",
+        "display": "display_banner.php"
+    },
+    "database": {
+        "column": "profile_banner_path",
+        "table": "users",
+        "type": "VARCHAR(255) NULL"
+    },
+    "permissions_requested": ["public_uploads"]
+}

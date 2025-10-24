@@ -1,0 +1,105 @@
+
+/* Table of contents
+––––––––––––––––––––––––––––––––––––––––––––––––––
+
+- Rounded user avatars
+- Buttons
+- Brand Styles
+
+*/
+
+
+/* Rounded avatars
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+/* Disable this if you don't want rounded avatars for users */
+.rounded-avatar {
+  border-radius: 50%;
+  /* Remove original shadow, use border defined in skeleton-auto.css :root */
+  /* -webkit-box-shadow: 0px 0px 0px 3px var(--button-background-color); */ 
+  /* box-shadow: 0px 0px 0px 3px var(--button-background-color); */
+  border: var(--image-border-px) solid var(--image-border-color);
+  background-color: var(--background-color) !important; /* Match background */
+  width: var(--image-width);
+  height: var(--image-height);
+  object-fit: cover; /* Ensure image covers the area */
+}
+
+/* Remove rainbow animation if not desired */
+/* @-webkit-keyframes rainbow ... */
+/* @-moz-keyframes rainbow ... */
+/* @-o-keyframes rainbow ... */
+/* @keyframes rainbow ... */
+
+
+.social-icon {
+  font-size: 32px; /* Keep or adjust as needed */
+  padding: 10px;
+}
+.social-icon-div {
+  padding-bottom: 30px;
+}
+.social-icon{color: var(--svg-color); /* Use variable for color */} 
+
+/* Buttons
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 1.15em; /* Match previous attempt */
+  color: var(--button-text-color);
+  min-height: auto; /* Remove fixed height */
+  padding: 18px 25px; /* Match previous attempt */
+  line-height: 1.5; /* Adjust line height */
+  cursor: pointer;
+
+  background-color: var(--button-background-color);
+  width: 100%;
+  max-width: 600px;
+  border-radius: 5px; /* Match previous attempt */
+  border: var(--button-border-px) solid var(--button-border-color);
+  margin-bottom: 18px !important; /* Match previous attempt */
+  font-weight: 500;
+  letter-spacing: 0.05rem; /* Reduced letter spacing */
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  box-shadow: none; /* Remove original shadow */
+}
+
+.button:hover {
+  background-color: var(--button-hover-background-color);
+  color: var(--button-text-hover-color) !important; /* Ensure hover text color applies */
+  border-color: var(--button-hover-background-color); /* Match hover background */
+  box-shadow: none; /* Ensure no shadow on hover */
+}
+
+/* Brand Icons
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.icon {
+  /* Adjust positioning and size as needed */
+  margin-right: 12px; /* Add space between icon and text */
+  vertical-align: middle;
+  width: 20px;
+  height: 20px;
+  filter: none; /* Remove grayscale filter */
+  /* Color is handled by SVG fill or parent color */
+}
+
+/* Ensure SVG icons inherit the button text color or have a specific color */
+.button svg {
+  fill: currentColor; /* Make SVG color match button text color */
+  width: 20px; /* Ensure consistent size */
+  height: 20px;
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+/* Style for SVGs used as social icons (if separate) */
+.social-icon svg {
+   fill: var(--svg-color); /* Use the gold accent color */
+   width: 32px; /* Match font-size */
+   height: 32px;
+}

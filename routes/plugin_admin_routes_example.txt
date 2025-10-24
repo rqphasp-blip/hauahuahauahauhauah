@@ -1,0 +1,16 @@
+// Exemplo de rotas para o gerenciador de plugins (adicione ao seu routes/web.php ou arquivo de rotas admin)
+// Certifique-se de proteger estas rotas com middleware de autenticação e admin, se aplicável.
+
+use App\Http\Controllers\Admin\PluginController;
+
+Route::middleware(["auth", "is_admin"])->prefix("admin")->name("admin.")->group(function () {
+    Route::prefix("plugins")->name("plugins.")->group(function () {
+        Route::get("/", [PluginController::class, "index"])->name("index");
+        Route::get("/create", [PluginController::class, "create"])->name("create");
+        Route::post("/store", [PluginController::class, "store"])->name("store");
+        Route::post("/{identifier}/activate", [PluginController::class, "activate"])->name("activate");
+        Route::post("/{identifier}/deactivate", [PluginController::class, "deactivate"])->name("deactivate");
+        Route::delete("/{identifier}/delete", [PluginController::class, "delete"])->name("delete");
+    });
+});
+

@@ -1,0 +1,12 @@
+{
+    "name": "User Profile Banner",
+    "identifier": "UserProfileBanner",
+    "description": "Adds a customizable banner to user profiles.",
+    "version": "1.0.0",
+    "author": "Manus",
+    "website": "https://manus.ai",
+    "provider": "\plugins\UserProfileBanner\Providers\\UserProfileBannerServiceProvider",
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

@@ -1,0 +1,18 @@
+{
+    "name": "Banner Topo",
+    "description": "Adiciona uma imagem de banner ao perfil público do usuário, com altura máxima de 250px.",
+    "version": "1.0.0",
+    "author": "Bio6.me",
+    "type": "simple",
+    "requires_migration": true,
+    "integration_type": "include",
+    "includes": {
+        "formulario": "includes/formulario_banner.blade.php",
+        "exibicao": "includes/exibir_banner.blade.php"
+    },
+    "routes": {
+        "upload": "/perfil/banner/upload",
+        "remover": "/perfil/banner/remover"
+    },
+    "permissions_requested": []
+}

@@ -1,0 +1,322 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap");
+
+
+
+/* Table of contents
+––––––––––––––––––––––––––––––––––––––––––––––––––
+
+- Grid
+- Base Styles
+- Background
+- Typography
+- Links
+- Code
+- Spacing
+- Utilities
+- Misc
+- Credit footer
+
+*/
+
+
+/* Grid
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+    margin: 0 auto;
+    box-sizing: border-box; }
+  .column {
+    position: center;
+    width: 100%;
+    float: center;
+    box-sizing: border-box; }
+  
+  /* For devices larger than 400px */
+  @media (min-width: 400px) {
+    .container {
+      width: 85%;
+      padding: 0; }
+  }
+  
+  /* For devices larger than 550px */
+  @media (min-width: 550px) {
+    .container {
+      width: 80%; }
+    .column,
+    .columns {
+      margin-left: 0; }
+    .column:first-child,
+    .columns:first-child {
+      margin-left: 0; }
+  
+  }
+  
+  
+  /* Base Styles
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+  /* NOTE
+  html is set to 62.5% so that all the REM measurements throughout Skeleton
+  are based on 10px sizing. So basically 1.5rem = 15px :) */
+
+  html {
+    font-size: 100%; }
+
+/* From the :root element you can easily change the colors of the design, its size and so on. */
+:root {
+
+  /* You can change the font family in the whole design here. (You need to add the font family to the codes.) */
+  --font-family: 'Roboto', sans-serif;
+
+  /* You can change the font size here, is proportional to all texts. */
+  --font-size: 16px;
+
+  /* Barber Theme Colors */
+  --background-color: #1a2e28; /* Dark Green */
+  --text-color-primary: #e8e6e3; /* Off-white */
+  --text-color-secondary: #b0bec5; /* Lighter Gray */
+  --accent-color: #c5a880; /* Gold */
+  --accent-color-transparent: rgba(197, 168, 128, 0.1);
+  --hover-text-color: #1a2e28; /* Dark Green for text on hover */
+  --footer-border-color: #4a6b5f; /* Darker Green */
+  --footer-text-color-secondary: #90a4ae; /* Medium Gray */
+
+  /* Image Styles */
+  --image-border-color: var(--accent-color);
+  --image-border-px: 4px;
+  --image-width: 120px;
+  --image-height: 120px;
+
+  /* Title and Description */
+  --title-color: #ffffff; /* White */
+  --description-color: var(--text-color-secondary);
+
+  /* SVG/Icon Color */
+  --svg-color: var(--accent-color);
+
+  /* Menu (Not typically used in LinkStack themes like this) */
+  --menu-background-color: #1f232e; /* Default, might not be visible */
+  --menu-text-color: var(--text-color-primary);
+  --menu-active-text-color: var(--accent-color);
+
+  /* Button Styles */
+  --button-background-color: var(--accent-color-transparent);
+  --button-text-color: var(--text-color-primary);
+  --button-hover-background-color: var(--accent-color);
+  --button-text-hover-color: var(--hover-text-color);
+  --button-border-color: var(--accent-color);
+  --button-border-px: 2px;
+
+  /* Textarea (Not typically used) */
+  --textarea-background-color: #1f232e;
+  --textarea-text-color: var(--text-color-primary);
+  --textarea-link-text-color: var(--accent-color);
+
+  /* Footer Styles */
+  --footer-background-color: var(--background-color); /* Match body */
+  --footer-text-color: var(--footer-text-color-secondary);
+  --footer-link-text-color: var(--accent-color);
+}
+
+::selection {
+  background: #03dac6; /* WebKit/Blink Browsers */
+}
+::-moz-selection {
+  background: #03dac6; /* Gecko Browsers */
+}
+
+  /* Background
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+  body {
+    min-height: 100vh;
+    font-family: var(--font-family) !important;
+    background-color: var(--background-color);
+    color: var(--title-color);
+    background-position: center;
+    background-repeat: no-repeat;
+    font-size: var(--font-size);
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  .background{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+ }
+  
+  /* Animation */
+  @keyframes transitionAnimation {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes animate {
+    0% {
+      background-position: -500%;
+    }
+    100% {
+      background-position: 500%;
+    }
+}
+
+@keyframes animStar {
+    from {
+        transform: translateY(0px);
+    }
+    to {
+        transform: translateY(-2000px);
+    }
+}
+  
+  /* Typography
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+  h1 {
+    font-family: 'Playfair Display', serif; /* Elegant serif for main name/title */
+    color: var(--title-color);
+    font-size: 2.8em;
+    font-weight: 700;
+    letter-spacing: 0.1rem; /* Reduced letter spacing */
+    text-transform: none; /* No uppercase */
+    margin-bottom: 0.2em;
+  }
+  
+  p {
+    font-family: 'Roboto', sans-serif; /* Use Roboto for description */
+    color: var(--description-color);
+    font-size: 1.2em;
+    line-height: 1.5em;
+    font-weight: 400;
+    margin-bottom: 2.5em; /* Increased margin */
+    letter-spacing: 0.05rem; /* Reduced letter spacing */
+  }
+
+  .badge {
+    padding-bottom: 7px;
+  }
+  
+  .badge-body {
+    fill: #222840;
+  }
+  
+  /* Links
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+  a {
+    color: #ffffff; 
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--button-text-hover-color); }
+  
+  .spacing {
+    padding: 0 10px;
+    padding-top: 50px;
+  }
+  
+  /* Code
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+  code {
+    padding: .2rem .5rem;
+    margin: 0 .2rem;
+    font-size: 90%;
+    white-space: nowrap;
+    background: #F1F1F1;
+    border: 1px solid #E1E1E1;
+    border-radius: 4px; }
+  pre > code {
+    display: block;
+    padding: 1rem 1.5rem;
+    white-space: pre; }
+  
+  /* Spacing
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+  button,
+  .button {
+    margin-bottom: 1rem;
+    display: block !important; }
+  input,
+  textarea,
+  select,
+  fieldset {
+    margin-bottom: 1.5rem; }
+  pre,
+  blockquote,
+  dl,
+  figure,
+  p,
+  ol {
+    margin-bottom: 2.5rem; }
+  
+  
+  /* Utilities
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+  .u-full-width {
+    width: 100%;
+    box-sizing: border-box; }
+  .u-max-full-width {
+    max-width: 100%;
+    box-sizing: border-box; }
+  .u-pull-right {
+    float: right; }
+  .u-pull-left {
+    float: left; }
+  
+  
+  /* Misc
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+  hr {
+    margin-top: 3rem;
+    margin-bottom: 3.5rem;
+    border-width: 0;
+    border-top: 1px solid #E1E1E1; }
+  
+
+  /* ===== Hidden Scrollbar ===== */
+  * {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */ }
+  *::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */ }
+  
+    
+/* Credit footer
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+/* Styling for credit footer text */
+.credit-txt {
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.credit-icon {
+  display: none;
+  right: 5px;
+}
+.credit-footer {
+  position: relative;
+  right: 15px;
+}
+
+.credit-footer:hover {
+  text-shadow: rgba(3,218,197,0.5) 0px 0px 6px;
+}
+
+/* Switches text color for credit footer for dark/light mode */
+
+ .credit-txt-clr{
+     color: #FFF !important;
+}
+
+

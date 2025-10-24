@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use App\Services\PluginManagerService; // Adicionar esta linha
+use Illuminate\Support\Facades\Log; // Adicionar para logging
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        // Seu código de registro existente...
+
+        // Registrar Service Providers dos Plugins Ativos
+        // É importante verificar se a aplicação não está com a configuração em cache
+        // ou se está rodando no console, para permitir a descoberta de novos plugins
+        // durante o desenvolvimento ou setup inicial.
+        if ($this->app->runningInConsole() || !$this->app->configurationIsCached()) {
+            try {
+                // Verificar se a tabela plugins existe antes de tentar acessá-la
+                // Isso evita erros durante as primeiras migrações (php artisan migrate)
+                if (\Illuminate\Support\Facades\Schema::hasTable("plugins")) {
+                    $pluginManager = $this->app->make(PluginManagerService::class);
+                    $activeProviders = $pluginManager->getActivePluginProviders();
+                    foreach ($activeProviders as $providerClass) {
+                        if (class_exists($providerClass)) {
+                            $this->app->register($providerClass);
+                        }
+                    }
+                } else {
+                    // Log::info("AppServiceProvider: Tabela 'plugins' ainda não existe. Pulando registro de providers de plugins.");
+                }
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Captura especificamente exceções de query, comuns se a DB não estiver pronta
+                Log::warning("AppServiceProvider: Erro de Query ao tentar registrar providers de plugins (DB pode não estar pronta): " . $e->getMessage());
+            } catch (\Exception $e) {
+                // Captura outras exceções gerais
+                Log::error("AppServiceProvider: Erro ao registrar providers de plugins: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Bootstrap any application services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        // Seu código de boot existente...
+        // Ex: Paginator::useBootstrap();
+        // Ex: Validator::extend(...);
+    }
+}
+

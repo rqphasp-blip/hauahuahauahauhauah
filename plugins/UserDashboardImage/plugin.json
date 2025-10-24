@@ -1,0 +1,12 @@
+{
+    "name": "User Dashboard Image",
+    "identifier": "UserDashboardImage",
+    "description": "Allows users to upload an image to be displayed on their dashboard.",
+    "version": "1.0.0",
+    "author": "Manus",
+    "website": "https://manus.ai",
+    "provider": "plugins\\UserDashboardImage\\Providers\\UserDashboardImageServiceProvider",
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

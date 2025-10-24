@@ -1,0 +1,16 @@
+{
+    "name": "Banner de Perfil de Usuário",
+    "description": "Adiciona uma imagem de banner ao perfil público do usuário, com altura máxima de 250px.",
+    "version": "1.0.0",
+    "author": "Manus",
+    "type": "direct",
+    "requires_migration": false,
+    "integration_type": "direct_include",
+    "main_file": "topimg.php",
+    "database": {
+        "column": "profile_banner_path",
+        "table": "users",
+        "type": "VARCHAR(255) NULL"
+    },
+    "permissions_requested": ["public_uploads"]
+}
