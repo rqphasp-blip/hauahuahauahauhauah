@@ -1,0 +1,12 @@
+{
+    "name": "Gestor de Contatos",
+    "identifier": "contatos",
+    "description": "Forms",    
+    "version": "1.0.0",
+    "author": "Equipe Bio6",
+    "website": "https://lgw.one",
+    "provider": "plugins\\contatos\\Providers\\ContatosServiceProvider",
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

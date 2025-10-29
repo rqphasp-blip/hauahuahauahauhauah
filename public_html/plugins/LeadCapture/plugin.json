@@ -1,0 +1,11 @@
+{
+    "name": "Lead Capture",
+    "identifier": "LeadCapture",
+    "description": "Formulário público e painel administrativo para gerenciar leads.",
+    "version": "1.0.0",
+    "author": "Equipe LinkStack",
+    "provider": "plugins\\LeadCapture\\Providers\\LeadCaptureServiceProvider",
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

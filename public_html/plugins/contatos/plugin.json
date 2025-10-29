@@ -1,0 +1,11 @@
+{
+    "name": "Gestor de Contatos",
+    "identifier": "contatos",
+    "version": "1.0.0",
+    "description": "Forms.",
+    "author": "Equipe Bio6",
+    "provider": "plugins\contatos\Providers\ContatosServiceProvider",
+	"aliases": {},
+    "files": [],
+    "requires": []
+}
