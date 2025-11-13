@@ -8,7 +8,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Facades\Cache;
 use GeoSot\EnvEditor\Controllers\EnvController;
 use GeoSot\EnvEditor\Exceptions\EnvException;
 use GeoSot\EnvEditor\Helpers\EnvFileContentManager;
@@ -34,43 +34,151 @@ class AdminController extends Controller
     //Statistics of the number of clicks and links
     public function index()
     {
-        $userId = Auth::user()->id;
-        $littlelink_name = Auth::user()->littlelink_name;
-        $links = Link::where('user_id', $userId)->select('link')->count();
-        $clicks = Link::where('user_id', $userId)->sum('click_number');
+         $user = Auth::user();
+        $userId = $user->id;
+        $littlelink_name = $user->littlelink_name;
 
-        $userNumber = User::count();
-        $siteLinks = Link::count();
-        $siteClicks = Link::sum('click_number');
+        $userLinkStats = Cache::remember(
+            "admin.dashboard.user-link-stats.{$userId}",
+            now()->addMinutes(2),
+            function () use ($userId) {
+                $stats = Link::where('user_id', $userId)
+                    ->selectRaw('COUNT(*) as total_links, COALESCE(SUM(click_number), 0) as total_clicks')
+                    ->first();
 
-        $users = User::select('id', 'name', 'email', 'created_at', 'updated_at')->get();
-        $lastMonthCount = $users->where('created_at', '>=', Carbon::now()->subDays(30))->count();
-        $lastWeekCount = $users->where('created_at', '>=', Carbon::now()->subDays(7))->count();
-        $last24HrsCount = $users->where('created_at', '>=', Carbon::now()->subHours(24))->count();
-        $updatedLast30DaysCount = $users->where('updated_at', '>=', Carbon::now()->subDays(30))->count();
-        $updatedLast7DaysCount = $users->where('updated_at', '>=', Carbon::now()->subDays(7))->count();
-        $updatedLast24HrsCount = $users->where('updated_at', '>=', Carbon::now()->subHours(24))->count();
+                if (! $stats) {
+                    return [
+                        'total_links' => 0,
+                        'total_clicks' => 0,
+                    ];
+                }
 
-        $links = Link::where('user_id', $userId)->select('link')->count();
-        $clicks = Link::where('user_id', $userId)->sum('click_number');
-        $topLinks = Link::where('user_id', $userId)->orderby('click_number', 'desc')
-            ->whereNotNull('link')->where('link', '<>', '')
-            ->take(5)->get();
+                return [
+                    'total_links' => (int) $stats->total_links,
+                    'total_clicks' => (int) $stats->total_clicks,
+                ];
+            }
+        );
 
-        $pageStats = [
-            'visitors' => [
-                'all' => visits('App\Models\User', $littlelink_name)->count(),
-                'day' => visits('App\Models\User', $littlelink_name)->period('day')->count(),
-                'week' => visits('App\Models\User', $littlelink_name)->period('week')->count(),
-                'month' => visits('App\Models\User', $littlelink_name)->period('month')->count(),
-                'year' => visits('App\Models\User', $littlelink_name)->period('year')->count(),
-            ],
-            'os' => visits('App\Models\User', $littlelink_name)->operatingSystems(),
-            'referers' => visits('App\Models\User', $littlelink_name)->refs(),
-            'countries' => visits('App\Models\User', $littlelink_name)->countries(),
-        ];
+        $links = $userLinkStats['total_links'];
+        $clicks = $userLinkStats['total_clicks'];
 
-        return view('panel/index', ['lastMonthCount' => $lastMonthCount,'lastWeekCount' => $lastWeekCount,'last24HrsCount' => $last24HrsCount,'updatedLast30DaysCount' => $updatedLast30DaysCount,'updatedLast7DaysCount' => $updatedLast7DaysCount,'updatedLast24HrsCount' => $updatedLast24HrsCount,'toplinks' => $topLinks, 'links' => $links, 'clicks' => $clicks, 'pageStats' => $pageStats, 'littlelink_name' => $littlelink_name, 'links' => $links, 'clicks' => $clicks, 'siteLinks' => $siteLinks, 'siteClicks' => $siteClicks, 'userNumber' => $userNumber]);
+        $globalStats = Cache::remember('admin.dashboard.global-stats', now()->addMinutes(5), function () {
+            $linkAggregate = Link::selectRaw('COUNT(*) as total_links, COALESCE(SUM(click_number), 0) as total_clicks')
+                ->first();
+
+            return [
+                'userNumber' => User::count(),
+                'siteLinks' => (int) ($linkAggregate->total_links ?? 0),
+                'siteClicks' => (int) ($linkAggregate->total_clicks ?? 0),
+            ];
+        });
+
+        $now = Carbon::now();
+        $last30Days = $now->copy()->subDays(30);
+        $last7Days = $now->copy()->subDays(7);
+        $last24Hours = $now->copy()->subHours(24);
+
+        $activityCounts = Cache::remember(
+            'admin.dashboard.activity-counts',
+            now()->addMinute(),
+            function () use ($last30Days, $last7Days, $last24Hours) {
+                $counts = User::selectRaw(
+                    'SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as created_last_30, '
+                    .'SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as created_last_7, '
+                    .'SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as created_last_24, '
+                    .'SUM(CASE WHEN updated_at >= ? THEN 1 ELSE 0 END) as updated_last_30, '
+                    .'SUM(CASE WHEN updated_at >= ? THEN 1 ELSE 0 END) as updated_last_7, '
+                    .'SUM(CASE WHEN updated_at >= ? THEN 1 ELSE 0 END) as updated_last_24',
+                    [
+                        $last30Days,
+                        $last7Days,
+                        $last24Hours,
+                        $last30Days,
+                        $last7Days,
+                        $last24Hours,
+                    ]
+                )->first();
+
+                if (! $counts) {
+                    return [
+                        'created_last_30' => 0,
+                        'created_last_7' => 0,
+                        'created_last_24' => 0,
+                        'updated_last_30' => 0,
+                        'updated_last_7' => 0,
+                        'updated_last_24' => 0,
+                    ];
+                }
+
+                return [
+                    'created_last_30' => (int) $counts->created_last_30,
+                    'created_last_7' => (int) $counts->created_last_7,
+                    'created_last_24' => (int) $counts->created_last_24,
+                    'updated_last_30' => (int) $counts->updated_last_30,
+                    'updated_last_7' => (int) $counts->updated_last_7,
+                    'updated_last_24' => (int) $counts->updated_last_24,
+                ];
+            }
+        );
+
+        $lastMonthCount = $activityCounts['created_last_30'];
+        $lastWeekCount = $activityCounts['created_last_7'];
+        $last24HrsCount = $activityCounts['created_last_24'];
+        $updatedLast30DaysCount = $activityCounts['updated_last_30'];
+        $updatedLast7DaysCount = $activityCounts['updated_last_7'];
+        $updatedLast24HrsCount = $activityCounts['updated_last_24'];
+
+        $topLinks = Cache::remember(
+            "admin.dashboard.top-links.{$userId}",
+            now()->addMinutes(2),
+            function () use ($userId) {
+                return Link::where('user_id', $userId)
+                    ->orderby('click_number', 'desc')
+                    ->whereNotNull('link')
+                    ->where('link', '<>', '')
+                    ->take(5)
+                    ->get();
+            }
+        );
+
+        $pageStats = Cache::remember(
+            "admin.dashboard.page-stats.{$userId}",
+            now()->addMinutes(2),
+            function () use ($littlelink_name) {
+                $visits = visits('App\Models\User', $littlelink_name);
+
+                return [
+                    'visitors' => [
+                        'all' => $visits->count(),
+                        'day' => (clone $visits)->period('day')->count(),
+                        'week' => (clone $visits)->period('week')->count(),
+                        'month' => (clone $visits)->period('month')->count(),
+                        'year' => (clone $visits)->period('year')->count(),
+                    ],
+                    'os' => (clone $visits)->operatingSystems(),
+                    'referers' => (clone $visits)->refs(),
+                    'countries' => (clone $visits)->countries(),
+                ];
+            }
+        );
+
+        return view('panel/index', [
+            'lastMonthCount' => $lastMonthCount,
+            'lastWeekCount' => $lastWeekCount,
+            'last24HrsCount' => $last24HrsCount,
+            'updatedLast30DaysCount' => $updatedLast30DaysCount,
+            'updatedLast7DaysCount' => $updatedLast7DaysCount,
+            'updatedLast24HrsCount' => $updatedLast24HrsCount,
+            'toplinks' => $topLinks,
+            'links' => $links,
+            'clicks' => $clicks,
+            'pageStats' => $pageStats,
+            'littlelink_name' => $littlelink_name,
+            'siteLinks' => $globalStats['siteLinks'],
+            'siteClicks' => $globalStats['siteClicks'],
+            'userNumber' => $globalStats['userNumber'],
+        ]);
     }
 
 // Users page

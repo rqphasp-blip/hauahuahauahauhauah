@@ -181,6 +181,15 @@ class LinkType extends Migration
             ]'
 
         ]);
+		
+		
+		
+		DB::table($this->TableName)->updateOrInsert([
+            'typename' => 'image',
+            'title' => 'Image Link',
+            'icon' => 'bi bi-image',
+            'description' => 'Add an image that links to another URL with a configurable maximum width.',
+        ]);
 
         DB::table($this->TableName)->updateOrInsert([
             'typename' => 'email',

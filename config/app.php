@@ -210,7 +210,14 @@ return [
         /*
          * User Profile Banner Service Provider
          */
-    App\Providers\plugins\googlereviews\Providers\GooglereviewsServiceProvider::class,
+        App\Providers\plugins\googlereviews\Providers\GooglereviewsServiceProvider::class,
+
+        /*
+         * Leads01 Plugin Service Provider
+         */
+		plugins\leads01\Providers\Leads01ServiceProvider::class,
+         
+		
 
 
 

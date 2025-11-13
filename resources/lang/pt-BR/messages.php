@@ -437,6 +437,9 @@ return array(
  */
 
 	'Title' => 'Título',
+    'Image URL' => 'URL da imagem',
+    'Alt text' => 'Texto alternativo',
+
 
 /*
 |--------------------------------------------------------------------------
@@ -858,6 +861,36 @@ return array(
 	'block.title.mapa' => 'Mapa',
 	'block.description.mapa' => 'Adicione o mapa do Google.',
 	
+	# image
+        'block.title.image' => 'Imagem com link',
+        'block.description.image' => 'Adicione uma imagem que leve a outra URL com um limite configurável de largura máxima.',
+	
+	 # gallery
+        'block.title.gallery' => 'Galeria de fotos',
+        'block.description.gallery' => 'Mostre as fotos enviadas pelo plugin Gallery em uma grade responsiva.',
+	
+
+	
+/*
+|--------------------------------------------------------------------------
+| Bloco de galeria
+|--------------------------------------------------------------------------
+*/
+
+        'gallery.form.instructions' => 'Selecione as fotos que deseja exibir nesta galeria.',
+        'gallery.form.select_all' => 'Selecionar todas',
+        'gallery.form.clear' => 'Limpar seleção',
+        'gallery.form.empty' => 'Nenhuma foto disponível ainda.',
+        'gallery.form.empty_hint' => 'Envie imagens pelo plugin Gallery para que elas apareçam aqui.',
+        'gallery.validation.unavailable' => 'O plugin Gallery não está disponível no momento. Envie ao menos uma foto antes de criar este bloco.',
+        'gallery.validation.invalid_selection' => 'Uma ou mais fotos selecionadas não foram encontradas.',
+        'gallery.modal.close' => 'Fechar galeria',
+        'gallery.display.default_title' => 'Foto da galeria',
+        'gallery.display.default_alt' => 'Foto exibida no bloco de galeria',
+
+
+	
+	
 	
 /*
 |--------------------------------------------------------------------------
@@ -916,6 +949,12 @@ return array(
 	'Work Address' => 'Endereço comercial',
 
 	'URL to the video' => 'URL do vídeo',
+	
+	
+	'URL' => 'URL',
+    'Maximum width (%)' => 'Largura máxima (%)',
+    'Maximum width help' => 'Defina a largura máxima como uma porcentagem da largura disponível da página. O padrão é 100%.',
+	
 /*
 |--------------------------------------------------------------------------
 | Maintenance Page

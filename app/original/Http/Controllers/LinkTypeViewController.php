@@ -47,10 +47,28 @@ class LinkTypeViewController extends Controller
             return view('components.pageitems.predefined-form', $data);
         }
     
-        // Set the block asset context before returning the view
+		
+		
+		
+		  // Resolve the correct blade template for this block.
+        $viewName = "blocks::{$typename}.form";
+
+        if (!View::exists($viewName)) {
+            // Fall back to legacy resolution that relies on the view paths list.
+            $fallbackView = $typename . '.form';
+
+            if (!View::exists($fallbackView)) {
+                abort(404, 'Block form not found.');
+            }
+
+            setBlockAssetContext($typename);
+
+            return view($fallbackView, $data);
+        }
+
         setBlockAssetContext($typename);
-    
-        return view($typename . '.form', $data);
+
+        return view($viewName, $data);
     }
 
     public function blockAsset(Request $request, $type)

@@ -1,0 +1,11 @@
+{
+    "name": "Leads 01",
+    "identifier": "leads01",
+    "version": "1.0.0",
+    "description": "Construtor de formulários de captação de leads com até 10 campos e gestão por campanha.",
+    "author": "Equipe Bio6",
+    "provider": "plugins\\leads01\\Providers\\Leads01ServiceProvider",
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

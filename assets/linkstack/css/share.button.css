@@ -29,8 +29,7 @@
   border-radius: 4px;
   position: fixed;
   top: 105%;
-  -webkit-transition: transform 0.3s linear;
-  transition: transform 0.3s linear;
+
   z-index: 2;
   text-align: center;
 }

@@ -1,0 +1,40 @@
+/* Table of contents
+––––––––––––––––––––––––––––––––––––––––––––––––––
+- Button hover animations
+- Card reveal animations
+*/
+
+.button-hover,
+.icon-hover,
+.credit-hover {
+  display: inline-flex;
+  transition: transform 0.25s ease;
+}
+
+.button-hover:focus,
+.button-hover:hover,
+.icon-hover:focus,
+.icon-hover:hover {
+  transform: translateY(-2px) scale(1.01);
+}
+
+.credit-hover:focus,
+.credit-hover:hover {
+  transform: translateY(-4px);
+}
+
+.fadein {
+  animation: fadeInSoft 1s ease forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInSoft {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

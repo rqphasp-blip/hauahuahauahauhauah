@@ -234,15 +234,24 @@ class UserController extends Controller
                 $result = handleLinkType($request, $linkType);
                 
                 // Extract rules and linkData from the result
-                $rules = $result['rules'];
-                $linkData = $result['linkData'];
-            
+                $rules = $result['rules'] ?? [];
+                $linkData = $result['linkData'] ?? [];
+                $afterValidation = $result['after_validation'] ?? null;
+
                 // Validate the request
                 $validator = Validator::make($request->all(), $rules);
 
                 // Check if validation fails
                 if ($validator->fails()) {
                     return back()->withErrors($validator)->withInput();
+                }
+
+                if (is_callable($afterValidation)) {
+                    $validatedData = method_exists($validator, 'validated') ? $validator->validated() : $request->all();
+                    $processedLinkData = $afterValidation($request, $linkData, $validatedData);
+                    if (is_array($processedLinkData)) {
+                        $linkData = $processedLinkData;
+                    }
                 }
 
                 $linkData['button_id'] = $linkData['button_id'] ?? 1; // Set 'button_id' unless overwritten by handleLinkType

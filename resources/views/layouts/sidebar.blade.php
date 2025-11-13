@@ -12,7 +12,7 @@ $usrhandl = Auth::user()->littlelink_name;
       <title>{{env('APP_NAME')}}</title>
 
       <script src="{{asset('assets/js/detect-dark-mode.js')}}"></script>
-	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+	  <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
       
       <base href="{{url()->current()}}" />
 
@@ -61,6 +61,7 @@ $usrhandl = Auth::user()->littlelink_name;
       
       <!-- RTL Css -->
       <link rel="stylesheet" href="{{asset('assets/css/rtl.min.css')}}" />
+	   <link rel="stylesheet" href="{{ asset('assets/css/disable-transitions.css') }}" />
       
 	  <meta name="csrf-token" content="{{ csrf_token() }}">
 	   <link rel="stylesheet" href="{{ asset('assets/linkstack/css/hover-min.css') }}">
@@ -314,11 +315,19 @@ $usrhandl = Auth::user()->littlelink_name;
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'leads') || Request::is('leads*') ? 'active' : ''}}" href="{{ route('leadcapture.index') }}">
+                         <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'leads') || Request::is('leads*') ? 'active' : ''}}" href="{{ route('leads01.index') }}">
                             <i class="icon">
                                  <svg class="icon-20" width="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="1.5"/><path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                             </i>
                             <span class="item-name">Leads</span>
+                        </a>
+                    </li>
+					<li class="nav-item">
+                        <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'gallery') || Request::is('gallery*') ? 'active' : ''}}" href="{{ route('gallery.index') }}">
+                            <i class="icon">
+                                <svg class="icon-20" width="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C20.5523 4 21 4.44772 21 5V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V5C3 4.44772 3.44772 4 4 4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.5 10.5C9.60457 10.5 10.5 9.60457 10.5 8.5C10.5 7.39543 9.60457 6.5 8.5 6.5C7.39543 6.5 6.5 7.39543 6.5 8.5C6.5 9.60457 7.39543 10.5 8.5 10.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 18L9.5 12L13 15.5L16.5 11L19.5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </i>
+                            <span class="item-name">Galeria de Fotos</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -616,7 +625,7 @@ $usrhandl = Auth::user()->littlelink_name;
             <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'stories') || Request::is('stories*') ? 'active' : ''}}" href="{{ route('stories.index') }}" >
                 <i class="bi bi-book-half"></i> Stories
             </a>
-            <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'leads') || Request::is('leads*') ? 'active' : ''}}" href="{{ route('leadcapture.index') }}">
+             <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'leads') || Request::is('leads*') ? 'active' : ''}}" href="{{ route('leads01.index') }}">
                 <i class="bi bi-person-lines-fill"></i> Leads
             </a>
             <a class="nav-link {{ Request::segment(1) == 'banner' ? 'active' : ''}}" href="{{ route('banner.index') }}">

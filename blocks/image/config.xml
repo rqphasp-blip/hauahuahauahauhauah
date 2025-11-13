@@ -1,0 +1,4 @@
+id: 10
+typename: image
+icon: "bi bi-image"
+custom_html: true

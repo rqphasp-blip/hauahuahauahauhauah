@@ -1,0 +1,13 @@
+/*
+ |--------------------------------------------------------------------------
+ | Transition overrides
+ |--------------------------------------------------------------------------
+ | Disable CSS transitions across the dashboard to reduce perceived latency
+ | and avoid delayed hover states while navigating between panels.
+ */
+*,
+*::before,
+*::after {
+    transition: none !important;
+    -webkit-transition: none !important;
+}

@@ -1,0 +1,6 @@
+id: 10
+typename: gallery
+icon: "bi bi-images"
+title: "Photo gallery"
+description: "Exiba uma grade de fotos enviadas pelo plugin Gallery."
+custom_html: true

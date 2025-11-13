@@ -50,20 +50,24 @@ Route::middleware(['web', 'auth'])->group(function () {
 
 
 
-use App\Providers\plugins\LeadCapture\LeadCaptureController;
-Route::middleware(['web'])->group(function () {
-    // Rotas públicas
-    Route::get('/leads/form', [App\Providers\plugins\LeadCapture\LeadCaptureController::class, 'showForm'])->name('leadcapture.form');
-    Route::post('/leads/store', [App\Providers\plugins\LeadCapture\LeadCaptureController::class, 'store'])->name('leadcapture.store');
-    
-    // Rotas administrativas
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/admin/leads', [App\Providers\plugins\LeadCapture\LeadCaptureController::class, 'index'])->name('leadcapture.index');
-        Route::get('/admin/leads/{id}', [App\Providers\plugins\LeadCapture\LeadCaptureController::class, 'show'])->name('leadcapture.show');
-        Route::post('/admin/leads/{id}/status', [App\Providers\plugins\LeadCapture\LeadCaptureController::class, 'updateStatus'])->name('leadcapture.update.status');
-        Route::delete('/admin/leads/{id}', [App\Providers\plugins\LeadCapture\LeadCaptureController::class, 'destroy'])->name('leadcapture.destroy');
-        Route::get('/admin/leads/export', [App\Providers\plugins\LeadCapture\LeadCaptureController::class, 'export'])->name('leadcapture.export');
-    });
+
+
+
+use App\Providers\plugins\gallery\GalleryController;
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
+    Route::get('/gallery/create', [GalleryController::class, 'create'])->name('gallery.create');
+    Route::post('/gallery', [GalleryController::class, 'store'])->name('gallery.store');
+    Route::get('/gallery/{id}', [GalleryController::class, 'show'])->name('gallery.show');
+    Route::delete('/gallery/{id}', [GalleryController::class, 'destroy'])->name('gallery.destroy');
+    Route::get('/user/{username}/gallery', [GalleryController::class, 'userGallery'])->name('gallery.user');
+});
+
+Route::middleware(['web', 'auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/gallery', fn () => redirect()->route('gallery.index'))->name('gallery.index');
+    Route::get('/gallery/create', fn () => redirect()->route('gallery.create'))->name('gallery.create');
+    Route::get('/gallery/{id}', fn ($id) => redirect()->route('gallery.show', $id))->name('gallery.show');
 });
 
 
