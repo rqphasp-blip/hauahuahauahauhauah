@@ -215,7 +215,7 @@ return [
         /*
          * Leads01 Plugin Service Provider
          */
-		plugins\leads01\Providers\Leads01ServiceProvider::class,
+		//App\Providers\plugins\leads01\Providers\Leads01ServiceProvider::class,
          
 		
 

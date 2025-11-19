@@ -3,4 +3,9 @@
 <file name="2022_09_22_123137_link-type.php" server="216.238.111.244" local="134074269180566166" remote="134074377000000000" Dst="0" />
 <file name="2024_06_13_000000_create_user_gallery_photos_table.php" server="216.238.111.244" local="134074314486913008" remote="134074422000000000" Dst="0" />
 <file name="2024_06_20_000001_add_thumbnail_path_to_user_gallery_photos_table.php.html" server="216.238.111.244" local="134075034399871821" remote="134075142000000000" Dst="0" />
+<file name="2024_06_20_000001_add_thumbnail_path_to_user_gallery_photos_table.php" server="216.238.111.244" local="134077093949957744" remote="134077201800000000" Dst="0" />
+<file name="2014_10_12_000000_create_users_table.php" server="216.238.111.244" local="133914924000000000" remote="133914924000000000" Dst="0" />
+<file name="2024_07_01_000200_add_image_path_to_user_products_table.php" server="216.238.111.244" local="134080242638319283" remote="134080350600000000" Dst="0" />
+<file name="2024_07_01_000100_create_user_products_tables.php" server="216.238.111.244" local="134080242285967944" remote="134080350000000000" Dst="0" />
+<file name="2024_07_01_000300_add_catolog_enabled_to_user_product_settings_table.php" server="216.238.111.244" local="134080244659887641" remote="134080352400000000" Dst="0" />
 </dwsync>

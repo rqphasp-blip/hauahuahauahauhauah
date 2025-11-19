@@ -125,7 +125,18 @@ class UserController extends Controller
             }
         }
 
-        return view('linkstack.linkstack', ['userinfo' => $userinfo, 'information' => $information, 'links' => $links, 'littlelink_name' => $littlelink_name]);
+         $productSettings = DB::table('user_product_settings')->where('user_id', $userinfo->id)->first();
+        $catalogEnabled = (bool) optional($productSettings)->catalog_enabled;
+        $catalogEmbedUrl = $catalogEnabled ? route('products.catalog', ['username' => $userinfo->name, 'embed' => 1]) : null;
+
+        return view('linkstack.linkstack', [
+            'userinfo' => $userinfo,
+            'information' => $information,
+            'links' => $links,
+            'littlelink_name' => $littlelink_name,
+            'catalogEnabled' => $catalogEnabled,
+            'catalogEmbedUrl' => $catalogEmbedUrl,
+        ]);
     }
 
     //Show littlelink page as home page if set in config

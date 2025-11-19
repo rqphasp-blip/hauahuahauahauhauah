@@ -4,14 +4,15 @@ namespace App\Providers\plugins\gallery;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class GalleryController extends Controller
 {
-    private const THUMB_MAX_SIZE = 102400; // 100 KB
-    private const THUMB_MAX_DIMENSION = 320;
+    private const THUMB_MAX_DIMENSION = 250;
+    private const ORIGINAL_MAX_DIMENSION = 2000; // largura/altura máxima do arquivo principal
 
     public function __construct()
     {
@@ -37,9 +38,14 @@ class GalleryController extends Controller
 
     public function store(Request $request)
     {
+        // Lift common PHP-level limits for heavier uploads before validation kicks in.
+        @ini_set('upload_max_filesize', '64M');
+        @ini_set('post_max_size', '64M');
+        @ini_set('memory_limit', '512M');
+
         $request->validate([
             'photos' => 'required|array',
-            'photos.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'photos.*' => 'file|mimetypes:image/jpeg,image/png,image/gif,image/webp,image/avif,image/tiff,image/bmp,image/x-icon,image/svg+xml',
             'caption' => 'nullable|string|max:255',
         ]);
 
@@ -59,17 +65,36 @@ class GalleryController extends Controller
                 ]);
             }
 
-            $baseName = uniqid('gallery_', true);
+            $baseName = $this->buildBaseName($photo);
             $originalPath = $originalDir . '/' . $baseName . '.webp';
             $thumbnailPath = $thumbnailDir . '/' . $baseName . '_thumb.webp';
 
-            if (! $this->saveWebp($image, public_path($originalPath))) {
+            $resized = $this->resizeImageToMaxDimension($image, self::ORIGINAL_MAX_DIMENSION);
+
+            if (! $resized) {
                 imagedestroy($image);
 
                 throw ValidationException::withMessages([
-                    'photos' => 'Não foi possível salvar a imagem enviada.',
+                    'photos' => 'Não foi possível otimizar as dimensões da imagem enviada.',
                 ]);
             }
+
+            if ($resized !== $image) {
+                imagedestroy($image);
+                $image = $resized;
+            }
+
+            $encodedOriginal = $this->encodeWebp($image, 85);
+
+            if ($encodedOriginal === null) {
+                imagedestroy($image);
+
+                throw ValidationException::withMessages([
+                    'photos' => 'Não foi possível otimizar a imagem enviada.',
+                ]);
+            }
+
+            file_put_contents(public_path($originalPath), $encodedOriginal);
 
             $thumbnail = $this->generateThumbnail($image);
 
@@ -81,14 +106,14 @@ class GalleryController extends Controller
                 ]);
             }
 
-            $thumbnailData = $this->encodeThumbnail($thumbnail);
+            $thumbnailData = $this->encodeWebp($thumbnail, 80);
 
             if ($thumbnailData === null) {
                 imagedestroy($image);
                 imagedestroy($thumbnail);
 
                 throw ValidationException::withMessages([
-                    'photos' => 'A miniatura excede o limite de 100KB. Tente enviar uma imagem menor.',
+                    'photos' => 'Não foi possível gerar a miniatura da imagem enviada.',
                 ]);
             }
 
@@ -96,6 +121,7 @@ class GalleryController extends Controller
 
             imagedestroy($image);
             imagedestroy($thumbnail);
+
 
             DB::table('user_gallery_photos')->insert([
                 'user_id' => $user->id,
@@ -194,9 +220,39 @@ class GalleryController extends Controller
         return $image;
     }
 
-    protected function saveWebp($image, string $destination): bool
+    protected function resizeImageToMaxDimension($image, int $maxDimension)
     {
-        return imagewebp($image, $destination, 80);
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        if (! $width || ! $height) {
+            return null;
+        }
+
+        if ($width <= $maxDimension && $height <= $maxDimension) {
+            return $image;
+        }
+
+        $scale = min($maxDimension / $width, $maxDimension / $height);
+        $newWidth = max(1, (int) round($width * $scale));
+        $newHeight = max(1, (int) round($height * $scale));
+
+        $resized = imagecreatetruecolor($newWidth, $newHeight);
+
+        if (! $resized) {
+            return null;
+        }
+
+        imagealphablending($resized, false);
+        imagesavealpha($resized, true);
+
+        if (! imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height)) {
+            imagedestroy($resized);
+
+            return null;
+        }
+
+        return $resized;
     }
 
     protected function generateThumbnail($image)
@@ -230,27 +286,17 @@ class GalleryController extends Controller
         return $thumbnail;
     }
 
-    protected function encodeThumbnail($thumbnail): ?string
+    protected function encodeWebp($image, int $quality = 85): ?string
     {
-        $quality = 80;
+        ob_start();
+        imagewebp($image, null, $quality);
+        $data = ob_get_clean();
 
-        while ($quality >= 10) {
-            ob_start();
-            imagewebp($thumbnail, null, $quality);
-            $data = ob_get_clean();
-
-            if ($data === false) {
-                return null;
-            }
-
-            if (strlen($data) <= self::THUMB_MAX_SIZE) {
-                return $data;
-            }
-
-            $quality -= 5;
+        if ($data === false) {
+            return null;
         }
 
-        return null;
+        return $data;
     }
 
     protected function deleteIfExists(?string $path): void
@@ -264,5 +310,21 @@ class GalleryController extends Controller
         if (file_exists($fullPath)) {
             unlink($fullPath);
         }
+    }
+
+    protected function buildBaseName(UploadedFile $photo): string
+    {
+        $originalName = $photo->getClientOriginalName();
+        $rawBase = pathinfo($originalName, PATHINFO_FILENAME);
+
+        // Permite letras (com acentos), números, espaços e os caracteres solicitados.
+        $sanitized = preg_replace('/[^\p{L}\p{N}_\-\[\]\(\)\s]+/u', '', $rawBase ?? '');
+        $sanitized = trim(preg_replace('/\s+/', '_', $sanitized), '_');
+
+        if ($sanitized === '') {
+            $sanitized = 'gallery';
+        }
+
+        return $sanitized . '_' . uniqid();
     }
 }

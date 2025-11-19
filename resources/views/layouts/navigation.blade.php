@@ -12,7 +12,7 @@ $usrhandl = Auth::user()->littlelink_name;
       <title>{{env("APP_NAME")}}</title>
 
       <script src="{{asset("assets/js/detect-dark-mode.js")}}"></script>
-	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+	  <script src="https://bio6.me/resources/js/jquery.min.js"></script>
       
       <base href="{{url()->current()}}" />
 
@@ -343,13 +343,13 @@ $usrhandl = Auth::user()->littlelink_name;
                   <li class="list-inline-item"><a href="{{ url("admin/pages/terms-of-service") }}">{{__("messages.Terms of Use")}}</a></li>
               </ul>
               <div class="right-panel">
-                  ©<script>document.write(new Date().getFullYear())</script> {{env("APP_NAME")}}, Made with
+                  ©<script>document.write(new Date().getFullYear())</script> {{env("APP_NAME")}}, Service
                   <span class="text-danger">
                       <svg width="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path fill-rule="evenodd" clip-rule="evenodd" d="M15.846 4.10001C15.846 4.10001 13.9246 2.19995 12.0033 2.19995C10.0819 2.19995 8.16049 4.10001 8.16049 4.10001C8.16049 4.10001 6.24696 5.99995 6.24696 8.29995C6.24696 10.5999 8.35179 12.4059 12.0033 15.5527C15.6548 12.4059 17.7596 10.5999 17.7596 8.29995C17.7596 5.99995 15.846 4.10001 15.846 4.10001Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                           <path d="M12.0033 15.5527C12.0033 15.5527 10.6205 16.6027 9.06982 17.8297C8.58849 18.1797 8.24696 18.7197 8.24696 19.2997C8.24696 20.4497 9.76682 21.7997 12.0033 21.7997C14.2398 21.7997 15.7596 20.4497 15.7596 19.2997C15.7596 18.7197 15.4181 18.1797 14.9368 17.8297C13.3861 16.6027 12.0033 15.5527 12.0033 15.5527Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                       </svg>
-                  </span> by <a href="https://manus.im">Manus</a>.
+                  </span> by <a href="https://lgw.one">Lgw.one</a>.
               </div>
           </div>
       </footer>

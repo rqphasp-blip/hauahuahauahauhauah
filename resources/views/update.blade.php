@@ -4,12 +4,12 @@
 
     @php
         // Must end with '/'
-        $betaServer          = env('BETA_SERVER', 'https://beta.linkstack.org/');
-        $betaPreUpdateServer = env('BETA_PRE_UPDATE_SERVER', 'https://pre-update.linkstack.org/beta/');
-        $updateServer        = env('UPDATE_SERVER', 'https://update.linkstack.org/');
-        $versionServer       = env('VERSION_SERVER', 'https://version.linkstack.org/');
-        $preUpdateServer     = env('PRE_UPDATE_SERVER', 'https://pre-update.linkstack.org/');
-        $repositoryUrl       = env('REPOSITORY_URL', 'https://github.com/linkstackorg/linkstack/');
+        $betaServer          = env('BETA_SERVER');
+        $betaPreUpdateServer = env('BETA_PRE_UPDATE_SERVER');
+        $updateServer        = env('UPDATE_SERVER');
+        $versionServer       = env('VERSION_SERVER');
+        $preUpdateServer     = env('PRE_UPDATE_SERVER');
+        $repositoryUrl       = env('REPOSITORY_URL', '#');
 
         $isBeta = env('JOIN_BETA', false);
 
@@ -17,11 +17,21 @@
             $preUpdateServer = $betaPreUpdateServer;
         }
 
+ $Vbeta = null;
+        $Vbeta_git = null;
+        $Vgit = trim(file_get_contents(base_path('version.json')));
+        $Vlocal = $Vgit;
+
         try {
-            $Vbeta = trim(Http::timeout(5)->get($betaServer . 'vbeta.json')->body());
-            $Vbeta_git = trim(Http::timeout(5)->get($betaServer . 'version.json')->body());
-            $Vgit = trim(Http::timeout(5)->get($versionServer)->body());
-            $Vlocal = trim(file_get_contents(base_path('version.json')));
+           // Only call remote servers if explicitly configured to avoid unwanted external requests
+            if ($versionServer) {
+                $Vgit = trim(Http::timeout(5)->get($versionServer)->body());
+            }
+
+            if ($isBeta && $betaServer) {
+                $Vbeta = trim(Http::timeout(5)->get($betaServer . 'vbeta.json')->body());
+                $Vbeta_git = trim(Http::timeout(5)->get($betaServer . 'version.json')->body());
+            }
         } catch (Exception $e) {
             session(['update_error' => 'Unexpected error. ' . $e->getMessage()]);
         }

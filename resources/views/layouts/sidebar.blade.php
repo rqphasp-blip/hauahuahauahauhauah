@@ -338,6 +338,15 @@ $usrhandl = Auth::user()->littlelink_name;
                             <span class="item-name">Gerenciar Banner</span>
                         </a>
                     </li>
+					 <li class="nav-item">
+                        <a class="nav-link {{ Request::segment(1) == 'products' ? 'active' : ''}}" href="{{ route('products.index') }}">
+                            <i class="icon">
+                                <svg class="icon-20" width="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 6H19V20H5V6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 4H21V8H3V4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 12H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            </i>
+                            <span class="item-name">Produtos</span>
+                        </a>
+                    </li>
+					
                     <li class="nav-item">
                         <a class="nav-link {{ Request::segment(1) == 'googlereviews' ? 'active' : ''}}" href="{{ route('googlereviews.index') }}">
                             <i class="icon">
@@ -489,11 +498,12 @@ $usrhandl = Auth::user()->littlelink_name;
                                 <?php // Requests newest version from server and sets it as variable
               
                                 try{
-                                $Vgit = external_file_get_contents("https://version.linkstack.org/"); 
+                                //$Vgit = external_file_get_contents("https://version.linkstack.org/"); 
               
                              // Requests current version from the local version file and sets it as variable
                                 $Vlocal = file_get_contents(base_path("version.json"));
-                                }
+                                $Vgit = $Vlocal;
+								}
               
                                 catch (Exception $e){
                                 $Vgit = "0"; 
@@ -531,7 +541,7 @@ $usrhandl = Auth::user()->littlelink_name;
                                         <tbody>
                                           <tr>
                                             <td><center><span class="badge rounded-pill bg-primary"><?php  if(file_exists(base_path("vbeta.json"))) {echo file_get_contents(base_path("vbeta.json"));} else {echo "none";}  ?></span></center></td>
-                                            <td><center><span class="badge rounded-pill bg-primary"><?php echo external_file_get_contents("https://beta.linkstack.org/vbeta.json"); ?></span></center></td>
+                                            <td><center><span class="badge rounded-pill bg-primary"></span></center></td>
                                           </tr>
                                         </tbody>
                                       </table>

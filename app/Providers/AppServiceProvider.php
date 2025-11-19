@@ -59,7 +59,8 @@ class AppServiceProvider extends ServiceProvider
         // Corrigido o caminho para o namespace de views
         View::addNamespace('plugins.banner', base_path('plugins/banner'));
         View::addNamespace('gallery', base_path('plugins/gallery/views'));
-        Log::info("AppServiceProvider boot method reached.");
+        View::addNamespace('products', base_path('plugins/products/views'));
+        //Log::info("AppServiceProvider boot method reached.");
 
         if (class_exists(\plugins\UserProfileBanner\Providers\UserProfileBannerServiceProvider::class)) {
             if (! $this->app->resolved(\plugins\UserProfileBanner\Providers\UserProfileBannerServiceProvider::class)) {
@@ -96,15 +97,15 @@ class AppServiceProvider extends ServiceProvider
             
             if (Schema::hasTable("plugins")) {
                 $activePluginProviders = $pluginManager->getActivePluginProviders();
-                Log::info("AppServiceProvider: Provedores de plugins ativos recebidos do PluginManagerService: " . print_r($activePluginProviders, true));
+                //Log::info("AppServiceProvider: Provedores de plugins ativos recebidos do PluginManagerService: " . print_r($activePluginProviders, true));
 
                 foreach ($activePluginProviders as $providerClass) {
                     if ($providerClass === \plugins\UserProfileBanner\Providers\UserProfileBannerServiceProvider::class) {
-                        Log::info("UserProfileBannerServiceProvider (plugins minúsculo) já tratado/registrado, pulando na lista de plugins ativos.");
+                  //      Log::info("UserProfileBannerServiceProvider (plugins minúsculo) já tratado/registrado, pulando na lista de plugins ativos.");
                         continue;
                     }
 
-                    Log::info("AppServiceProvider: Verificando provider dinâmico: {$providerClass}");
+                //    Log::info("AppServiceProvider: Verificando provider dinâmico: {$providerClass}");
 
                     if (class_exists($providerClass)) {
                         if (! $this->app->resolved($providerClass)){
@@ -112,14 +113,14 @@ class AppServiceProvider extends ServiceProvider
                             Log::info("Plugin Service Provider dinâmico registrado: {$providerClass}");
                         }
                     } else {
-                        Log::warning("Classe do Service Provider do plugin dinâmico NÃO encontrada: {$providerClass}");
+              //          Log::warning("Classe do Service Provider do plugin dinâmico NÃO encontrada: {$providerClass}");
                     }
                 }
             } else {
-                Log::warning("A tabela \"plugins\" não existe. Nenhum plugin dinâmico será carregado. Execute as migrações.");
+                //Log::warning("A tabela \"plugins\" não existe. Nenhum plugin dinâmico será carregado. Execute as migrações.");
             }
         } catch (\Exception $e) {
-            Log::error("Erro ao carregar providers de plugins dinâmicos no AppServiceProvider@boot: " . $e->getMessage());
+            //Log::error("Erro ao carregar providers de plugins dinâmicos no AppServiceProvider@boot: " . $e->getMessage());
         }
 		
     }

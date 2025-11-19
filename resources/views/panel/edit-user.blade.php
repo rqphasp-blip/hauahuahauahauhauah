@@ -115,7 +115,7 @@
                         </div>
                             
                             <div class="form-group col-lg-8">
-                              <label> {{__('messages.Page description')}} - 000</label>
+                              <label> {{__('messages.Page description')}}</label>
                               <textarea class="form-control ckeditor" name="littlelink_description" rows="3">{{ $user->littlelink_description }}</textarea>
                             </div>
                             <div class="form-group col-lg-8">
