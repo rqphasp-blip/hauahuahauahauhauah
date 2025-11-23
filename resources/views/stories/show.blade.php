@@ -24,7 +24,19 @@
                     @endif
 
                     <div class="text-center mb-3">
-                        <img src="{{ asset($story->image_path) }}" class="img-fluid rounded" alt="Story Image" style="max-height: 500px;">
+                      @php
+                            $extension = strtolower(pathinfo($story->image_path ?? '', PATHINFO_EXTENSION));
+                            $isVideo = in_array($extension, ['mp4', 'mov', 'm4v', 'webm']);
+                        @endphp
+
+                        @if($isVideo)
+                            <video class="img-fluid rounded" controls muted preload="metadata" style="max-height: 500px; width: 100%;">
+                                <source src="{{ asset($story->image_path) }}" type="video/{{ $extension === 'mov' ? 'quicktime' : $extension }}">
+                                Seu navegador não suporta a reprodução de vídeos.
+                            </video>
+                        @else
+                            <img src="{{ asset($story->image_path) }}" class="img-fluid rounded" alt="Story Image" style="max-height: 500px;">
+                        @endif
                     </div>
 
                     @if($story->caption)

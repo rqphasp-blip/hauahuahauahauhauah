@@ -687,66 +687,76 @@
         renderCart();
     }
 
-    function renderCart() {
-        if (!cart.length) {
-            cartList.innerHTML = '<p class="text-muted mb-0">Seu carrinho está vazio.</p>';
-            cartTotal.textContent = currencyFormatter.format(0);
-            precheckoutSummary.innerHTML = '<li class="text-muted">Adicione itens para visualizar o resumo.</li>';
-            finalizeButton.disabled = true;
-            return;
-        }
+function renderCart() {
+    if (!cart.length) {
+        cartList.innerHTML = '<p class="text-muted mb-0">Seu carrinho está vazio.</p>';
+        cartTotal.textContent = currencyFormatter.format(0);
+        precheckoutSummary.innerHTML = '<li class="text-muted">Adicione itens para visualizar o resumo.</li>';
+        finalizeButton.disabled = true;
+        return;
+    }
 
-        let html = '';
-        let total = 0;
-        let totalWeight = 0;
+    let html = '';
+    let total = 0;
+    let totalWeight = 0;
 
-        cart.forEach((item, index) => {
-            const addonsHtml = item.addons.map((addon, addonIndex) => `
-                <div class="cart-item-addons" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                    <span>+ ${addon.name} (${currencyFormatter.format(addon.price)})</span>
-                    <button class="addon-remove-cart-btn"
-                        data-item="${index}"
-                        data-addon="${addonIndex}">
-                        🗑
-                    </button>
-                </div>
-            `).join('');
+    cart.forEach((item, index) => {
+        const addonsHtml = item.addons.map((addon, addonIndex) => `
+            <div class="cart-item-addons" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <span>+ ${addon.name} (${currencyFormatter.format(addon.price)})</span>
+                <button class="addon-remove-cart-btn"
+                    data-item="${index}"
+                    data-addon="${addonIndex}">
+                    🗑
+                </button>
+            </div>
+        `).join('');
 
-            const itemTotal = calculateItemTotal(item);
-            const itemWeight = item.weight * item.quantity;
-            total += itemTotal;
-            totalWeight += itemWeight;
+        const itemTotal = calculateItemTotal(item);
+        const itemWeight = item.weight * item.quantity;
+        total += itemTotal;
+        totalWeight += itemWeight;
 
-            html += `
-                <div class="cart-item">
-                    <div class="cart-item-name">${item.name}</div>
-                    ${addonsHtml}
-                    <div class="cart-item-footer">
-                        <div class="cart-qty-control">
-                            <button class="cart-qty-btn cart-qty-minus" data-index="${index}">-</button>
-                            <span class="cart-qty-value">${item.quantity}</span>
-                            <button class="cart-qty-btn cart-qty-plus" data-index="${index}">+</button>
-                        </div>
-                        <div class="cart-price-pill">
-                            ${currencyFormatter.format(itemTotal)}
-                        </div>
+        html += `
+            <div class="cart-item">
+                <div class="cart-item-name">${item.name}</div>
+                ${addonsHtml}
+                <div class="cart-item-footer">
+                    <div class="cart-qty-control">
+                        <button class="cart-qty-btn cart-qty-minus" data-index="${index}">-</button>
+                        <span class="cart-qty-value">${item.quantity}</span>
+                        <button class="cart-qty-btn cart-qty-plus" data-index="${index}">+</button>
+                    </div>
+                    <div class="cart-price-pill">
+                        ${currencyFormatter.format(itemTotal)}
                     </div>
                 </div>
-            `;
-        });
+            </div>
+        `;
+    });
 
-        cartList.innerHTML = html;
-        cartTotal.textContent = currencyFormatter.format(total);
+    cartList.innerHTML = html;
+    cartTotal.textContent = currencyFormatter.format(total);
 
-        precheckoutSummary.innerHTML = cart.map(item => {
-            const addonsNote = item.addons.length
-                ? `<div class="summary-item-note">+ ${item.addons.map(a => a.name).join(', ')}</div>`
-                : '';
-            return `<li><div>${item.quantity}x ${item.name}</div>${addonsNote}</li>`;
-        }).join('');
+    // 🔽 AQUI: resumo do pré-checkout com total do pedido
+    let summaryHtml = cart.map(item => {
+        const addonsNote = item.addons.length
+            ? `<div class="summary-item-note">+ ${item.addons.map(a => a.name).join(', ')}</div>`
+            : '';
+        return `<li><div>${item.quantity}x ${item.name}</div>${addonsNote}</li>`;
+    }).join('');
 
-        finalizeButton.disabled = !phoneInput.value.trim() || !cart.length;
-    }
+    summaryHtml += `
+        <li style="margin-top:6px; font-weight:600;">
+            Total do pedido: ${currencyFormatter.format(total)}
+        </li>
+    `;
+
+    precheckoutSummary.innerHTML = summaryHtml;
+
+    finalizeButton.disabled = !phoneInput.value.trim() || !cart.length;
+}
+
 
     function handleCustomerLookup() {
         const phone = phoneInput.value.trim();

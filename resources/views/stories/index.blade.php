@@ -28,18 +28,19 @@
                             @foreach($activeStories as $story)
                                 <div class="col-md-4 mb-4">
                                     <div class="card">
-                                        <img src="{{ asset($story->image_path) }}" class="card-img-top" alt="Story Image">
-                                        <div class="card-body">
-                                            <p class="card-text">
-                                                {{ $story->caption ?? 'Sem legenda' }}
-                                            </p>
-                                            <div class="d-flex justify-content-between">
-                                                <small class="text-muted">
-                                                    {{ \Carbon\Carbon::parse($story->created_at)->diffForHumans() }}
-                                                </small>
-                                                <a href="{{ route('stories.show', $story->id) }}" class="btn btn-sm btn-info">Ver</a>
-                                            </div>
-                                        </div>
+                                        @php
+                                            $extension = strtolower(pathinfo($story->image_path ?? '', PATHINFO_EXTENSION));
+                                            $isVideo = in_array($extension, ['mp4', 'mov', 'm4v', 'webm']);
+                                        @endphp
+
+                                        @if($isVideo)
+                                            <video class="card-img-top" controls muted preload="metadata" style="max-height: 260px; object-fit: cover;">
+                                                <source src="{{ asset($story->image_path) }}" type="video/{{ $extension === 'mov' ? 'quicktime' : $extension }}">
+                                                Seu navegador não suporta a reprodução de vídeos.
+                                            </video>
+                                        @else
+                                            <img src="{{ asset($story->image_path) }}" class="card-img-top" alt="Story Image">
+                                        @endif
                                     </div>
                                 </div>
                             @endforeach

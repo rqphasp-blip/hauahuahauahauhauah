@@ -11,23 +11,76 @@
             @include('linkstack.modules.theme')
         @endforeach
 
- @if($catalogEnabled ?? false)
+   @if($catalogEnabled ?? false)
             <style>
-                .ls-tab-card { background: #ffffff; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,.08); padding: 1.5rem; }
-                .ls-tab-buttons { gap: .5rem; }
-                .ls-tab-buttons .btn { border-radius: 999px; }
+                .ls-tab-card {
+                    background: transparent;
+                    border-radius: 16px;
+                    box-shadow: 0 15px 40px rgba(0,0,0,.08);
+                    padding: 1rem;
+                    transition: background-color 0.2s ease;
+                }
+
+                .ls-tab-card--catalog {
+                    background: #ffffff;
+                    color: #1a1a1a;
+                }
+
+                .ls-tab-card--catalog .ls-tab-buttons {
+                    border-bottom-color: rgba(0, 0, 0, 0.1);
+                }
+
+                .ls-tab-buttons {
+                    display: flex;
+                    gap: 1.25rem;
+                    overflow-x: auto;
+                    padding-bottom: 0.35rem;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+                    margin-bottom: 1rem;
+                    scrollbar-width: none;
+                }
+
+                .ls-tab-buttons::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .ls-tab-button {
+                    background: transparent;
+                    border: none;
+                    color: inherit;
+                    font-size: 0.95rem;
+                    font-weight: 500;
+                    line-height: 1.2;
+                    padding: 0.25rem 0;
+                    position: relative;
+                    white-space: nowrap;
+                    opacity: 0.6;
+                    transition: opacity 0.2s ease;
+                }
+
+                .ls-tab-button::after {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    bottom: 0;
+                    width: 100%;
+                    height: 2px;
+                    background-color: transparent;
+                    transition: background-color 0.2s ease;
+                }
+
+                .ls-tab-button.active {
+                    opacity: 1;
+                }
+
+                .ls-tab-button.active::after {
+                    background-color: currentColor;
+                }
+
                 .ls-tab-pane { display: none; }
                 .ls-tab-pane.active { display: block; }
             </style>
         @endif
-
-        <style>
-            .ls-tab-card { background: #ffffff; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,.08); padding: 1.5rem; }
-            .ls-tab-buttons { gap: .5rem; }
-            .ls-tab-buttons .btn { border-radius: 999px; }
-            .ls-tab-pane { display: none; }
-            .ls-tab-pane.active { display: block; }
-        </style>
     @endpush
 
     @push('linkstack-body-start')
@@ -37,20 +90,21 @@
     @endpush
 
     @push('linkstack-content')
+        @foreach($information as $info)
+            @include('linkstack.elements.avatar')
+            @include('linkstack.elements.heading')
+            @include('linkstack.elements.bio')
+        @endforeach
+        @include('linkstack.elements.icons')
+
         @if($catalogEnabled ?? false)
             <div class="ls-tab-card">
-                <div class="d-flex flex-wrap ls-tab-buttons" role="tablist">
-                    <button class="btn btn-primary" type="button" data-ls-tab-target="ls-tab-profile" aria-selected="true">Perfil</button>
-                    <button class="btn btn-outline-primary" type="button" data-ls-tab-target="ls-tab-catalog" data-catalog-url="{{ $catalogEmbedUrl }}" aria-selected="false">Catálogo</button>
+                <div class="ls-tab-buttons" role="tablist">
+                    <button class="ls-tab-button active" type="button" data-ls-tab-target="ls-tab-profile" aria-selected="true">Perfil</button>
+                    <button class="ls-tab-button" type="button" data-ls-tab-target="ls-tab-catalog" data-catalog-url="{{ $catalogEmbedUrl }}" aria-selected="false">Catálogo</button>
                 </div>
                 <div class="mt-3">
                     <div id="ls-tab-profile" class="ls-tab-pane active">
-                        @foreach($information as $info)
-                            @include('linkstack.elements.avatar')
-                            @include('linkstack.elements.heading')
-                            @include('linkstack.elements.bio')
-                        @endforeach
-                        @include('linkstack.elements.icons')
                         @include('linkstack.elements.buttons')
                         @yield('content')
                         @include('linkstack.modules.footer')
@@ -61,12 +115,6 @@
                 </div>
             </div>
         @else
-            @foreach($information as $info)
-                @include('linkstack.elements.avatar')
-                @include('linkstack.elements.heading')
-                @include('linkstack.elements.bio')
-            @endforeach
-            @include('linkstack.elements.icons')
             @include('linkstack.elements.buttons')
             @yield('content')
             @include('linkstack.modules.footer')
@@ -82,12 +130,24 @@
                         profile: document.getElementById('ls-tab-profile'),
                         catalog: document.getElementById('ls-tab-catalog'),
                     };
+                    const tabCard = document.querySelector('.ls-tab-card');
                     let catalogLoaded = false;
+
+                    function updateTabCardBackground(targetId) {
+                        if (!tabCard) return;
+                        if (targetId === 'ls-tab-catalog') {
+                            tabCard.classList.add('ls-tab-card--catalog');
+                        } else {
+                            tabCard.classList.remove('ls-tab-card--catalog');
+                        }
+                    }
 
                     function setActive(targetId) {
                         Object.values(panes).forEach(pane => pane.classList.remove('active'));
-                        buttons.forEach(btn => btn.classList.remove('btn-primary'));
-                        buttons.forEach(btn => btn.classList.add('btn-outline-primary'));
+                        buttons.forEach(btn => {
+                            btn.classList.remove('active');
+                            btn.setAttribute('aria-selected', 'false');
+                        });
 
                         const targetPane = document.getElementById(targetId);
                         if (!targetPane) return;
@@ -95,9 +155,11 @@
                         targetPane.classList.add('active');
                         const activeButton = Array.from(buttons).find(btn => btn.dataset.lsTabTarget === targetId);
                         if (activeButton) {
-                            activeButton.classList.add('btn-primary');
-                            activeButton.classList.remove('btn-outline-primary');
+                            activeButton.classList.add('active');
+                            activeButton.setAttribute('aria-selected', 'true');
                         }
+
+                        updateTabCardBackground(targetId);
                     }
 
                     async function loadCatalog(button) {
@@ -141,6 +203,8 @@
                             }
                         });
                     });
+
+                    updateTabCardBackground('ls-tab-profile');
                 });
             </script>
         @endpush
