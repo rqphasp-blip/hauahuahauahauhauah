@@ -60,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
         View::addNamespace('plugins.banner', base_path('plugins/banner'));
         View::addNamespace('gallery', base_path('plugins/gallery/views'));
         View::addNamespace('products', base_path('plugins/products/views'));
+        View::addNamespace('instagramstories', base_path('plugins/instagramstories/views'));
         //Log::info("AppServiceProvider boot method reached.");
 
         if (class_exists(\plugins\UserProfileBanner\Providers\UserProfileBannerServiceProvider::class)) {

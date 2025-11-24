@@ -1,0 +1,8 @@
+{
+    "name": "Highlights",
+    "identifier": "highlights",
+    "version": "1.0.0",
+    "description": "Permite criar até 5 destaques com imagens ou vídeos curtos.",
+    "author": "Equipe",
+    "provider": "plugins\\highlights\\Providers\\HighlightsServiceProvider"
+}

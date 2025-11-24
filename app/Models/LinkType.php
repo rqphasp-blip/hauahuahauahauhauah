@@ -58,6 +58,21 @@ class LinkType extends Model
         }
     }
     
+		  if (!$linkTypes->contains('typename', 'google_maps_profile')) {
+            $linkTypes->push(new self([
+                'id' => 11,
+                'typename' => 'google_maps_profile',
+                'title' => 'Google Maps (perfil)',
+                'description' => 'Exibe o mapa configurado pelo usuário no mini-site',
+                'icon' => 'bi bi-geo-alt-fill',
+                'custom_html' => true,
+                'ignore_container' => false,
+                'include_libraries' => [],
+            ]));
+        }
+		
+		
+		
         $custom_order = [
             'predefined',
             'link',
@@ -69,6 +84,7 @@ class LinkType extends Model
             'text',
 			'image',
 			'gallery',
+			'google_maps_profile',
         ];
     
         $sorted = $linkTypes->sortBy(function ($item) use ($custom_order) {

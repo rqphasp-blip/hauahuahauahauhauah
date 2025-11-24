@@ -330,6 +330,17 @@ $usrhandl = Auth::user()->littlelink_name;
                             <span class="item-name">Galeria de Fotos</span>
                         </a>
                     </li>
+                    
+                                       <li class="nav-item">
+                        <a class="nav-link {{ Request::is('stories/import/instagram*') ? 'active' : ''}}" href="{{ route('stories.instagram.import') }}">
+                            <i class="icon">
+                                <svg class="icon-20" width="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.5C5 12.2239 5.22386 12 5.5 12H11.25V4.75C11.25 4.33579 11.5858 4 12 4C12.4142 4 12.75 4.33579 12.75 4.75V12H18.5C18.7761 12 19 12.2239 19 12.5C19 12.7761 18.7761 13 18.5 13H12.75V19.25C12.75 19.6642 12.4142 20 12 20C11.5858 20 11.25 19.6642 11.25 19.25V13H5.5C5.22386 13 5 12.7761 5 12.5Z" fill="currentColor"/></svg>
+                            </i>
+                            <span class="item-name">Importar Stories Instagram</span>
+                        </a>
+                    </li>
+                    
+                    
                     <li class="nav-item">
                         <a class="nav-link {{ Request::segment(1) == 'banner' ? 'active' : ''}}" href="{{ route('banner.index') }}">
                             <i class="icon">
@@ -643,7 +654,16 @@ $usrhandl = Auth::user()->littlelink_name;
             </a>
             <a class="nav-link {{ Request::segment(1) == 'googlereviews' ? 'active' : ''}}" href="{{ route('googlereviews.index') }}">
                 <i class="bi bi-google"></i> Avaliações Google
+            
             </a>
+            
+             <a class="nav-link {{ Request::is('stories/import/instagram*') ? 'active' : ''}}" href="{{ route('stories.instagram.import') }}">
+                <i class="bi bi-cloud-download"></i> Importar Stories Instagram
+            </a>
+            <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'leads') || Request::is('leads*') ? 'active' : ''}}" href="{{ route('leads01.index') }}">
+            
+            
+            
             <a class="nav-link {{ Request::segment(2) == 'page' ? 'active' : ''}}" href="{{ url('/studio/page') }}">
                 <i class="bi bi-palette-fill"></i> {{__('messages.Appearance')}}
             </a>
