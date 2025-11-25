@@ -262,7 +262,12 @@ $usrhandl = Auth::user()->littlelink_name;
                                     <span class="item-name">{{__('messages.Manage Users')}}</span>
                                 </a>
                             </li>
-							
+							 <li class="nav-item">
+                                <a class="nav-link {{ Request::segment(2) == 'verification-badges' ? 'active' : ''}}" href="{{ route('verification-badges.index') }}">
+                                  <i class="bi bi-patch-check-fill"></i>
+                                    <span class="item-name">{{ __('messages.Verification badges') }}</span>
+                                </a>
+                            </li>
 							
 <li class="nav-item">
     <a class="nav-link {{ Request::segment(2) == 'plugins' ? 'active' : ''}}" href="{{ route('admin.plugins.index') }}">
@@ -305,6 +310,19 @@ $usrhandl = Auth::user()->littlelink_name;
                             <span class="item-name">{{__('messages.Links')}}</span>
                         </a>
                     </li>
+
+                   <li class="nav-item">
+                        <a class="nav-link {{ Request::segment(1) == 'highlights' ? 'active' : ''}}" href="{{ route('highlights.index') }}">
+                            <i class="icon">
+                                <svg class="icon-20" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 3L14.327 8.712L20.5 9.25L15.75 13.288L17.08 19.375L12 16.25L6.92 19.375L8.25 13.288L3.5 9.25L9.673 8.712L12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                                </svg>
+                            </i>
+                            <span class="item-name">Destaques</span>
+                        </a>
+                    </li>
+
+
                     <li class="nav-item">
                         <a class="nav-link {{ (Request::segment(1) == 'admin' && Request::segment(2) == 'stories') || Request::is('stories*') ? 'active' : ''}}" href="{{ route('stories.index') }}" >
                             <i class="icon">
@@ -312,6 +330,15 @@ $usrhandl = Auth::user()->littlelink_name;
 
                             </i>
                             <span class="item-name">Stories</span>
+                        </a>
+                    </li>
+					
+					  <li class="nav-item">
+                        <a class="nav-link {{ Request::is('importar-perfil*') ? 'active' : ''}}" href="{{ route('profile-import.index') }}">
+                            <i class="icon">
+                                <svg class="icon-20" width="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.5 7.5H14.25C13.0074 7.5 12 8.50736 12 9.75V14.25C12 15.4926 13.0074 16.5 14.25 16.5H16.5C17.7426 16.5 18.75 15.4926 18.75 14.25V9.75C18.75 8.50736 17.7426 7.5 16.5 7.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.75 7.5H7.5C6.25736 7.5 5.25 8.50736 5.25 9.75V14.25C5.25 15.4926 6.25736 16.5 7.5 16.5H9.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            </i>
+                            <span class="item-name">Importar perfil</span>
                         </a>
                     </li>
                     <li class="nav-item">

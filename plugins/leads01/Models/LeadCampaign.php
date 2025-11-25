@@ -2,13 +2,12 @@
 
 namespace plugins\leads01\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\User;
 
 class LeadCampaign extends Model
 {
-    use HasFactory;
+    protected $table = 'leads01_campaigns';
 
     protected $fillable = [
         'user_id',
@@ -16,18 +15,20 @@ class LeadCampaign extends Model
         'slug',
         'description',
         'thank_you_message',
+        'status',
     ];
 
-    protected $casts = [
-        'user_id' => 'integer',
-    ];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
-    public function fields(): HasMany
+    public function fields()
     {
         return $this->hasMany(LeadField::class, 'campaign_id');
     }
 
-    public function entries(): HasMany
+    public function entries()
     {
         return $this->hasMany(LeadEntry::class, 'campaign_id');
     }

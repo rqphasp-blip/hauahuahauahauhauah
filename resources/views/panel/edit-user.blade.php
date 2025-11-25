@@ -126,6 +126,39 @@
                                 <option <?= ($user->role === strtolower('admin')) ? 'selected' : '' ?>>admin</option>
                               </select>
                             </div>
+							
+							
+							
+							
+				 <div class="form-group col-lg-8 mt-3">
+                              <label class="d-block">{{ __('messages.Show checkmark') }}</label>
+                              <input type="hidden" name="checkmark" value="0">
+                              <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="user-checkmark"
+                                  name="checkmark" value="1"
+                                  <?php if(\App\Models\UserData::getData($user->id, 'checkmark')) { echo 'checked'; } ?>>
+                                <label class="form-check-label" for="user-checkmark">{{ __('messages.Enable') }}</label>
+                              </div>
+                            </div>
+                            @php
+                              $selectedBadgeId = (int) (\App\Models\UserData::getData($user->id, 'verification_badge_id') ?? 0);
+                            @endphp
+                            <div class="form-group col-lg-8 mt-3">
+                              <label class="d-block">{{ __('messages.Verification badge selection') }}</label>
+                              <select class="form-control" name="verification_badge_id">
+                                <option value="">{{ __('messages.Default verification badge') }}</option>
+                                @foreach($badges as $badge)
+                                  <option value="{{ $badge->id }}" {{ $selectedBadgeId === $badge->id ? 'selected' : '' }}>
+                                    {{ $badge->name }}
+                                  </option>
+                                @endforeach
+                              </select>
+                              <small class="text-muted">{{ __('messages.Verification badge selection help') }}</small>
+                            </div>
+							
+							
+							
+							
                             @endforeach
                             <button type="submit" class="mt-3 ml-3 btn btn-primary">{{__('messages.Save')}}</button>
                           </form>

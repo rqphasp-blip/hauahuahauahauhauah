@@ -260,7 +260,38 @@
                         <label for="littlelink_name" class="form-label">{{__("messages.Page URL")}}</label>
                         <div class="input-group mb-3 has-validation">
                           <span class="input-group-text" id="basic-addon3">{{str_replace(["http://", "https://"], "", url(""))}}/@</span>
-                          <input type="littlelink_name" class="form-control" id="littlelink_name" name="littlelink_name" aria-describedby="littlelink_name" value="{{ $page->littlelink_name ?? "" }}" :value="old("littlelink_name")" required autofocus >
+                          
+							
+							
+							
+							<input type="littlelink_name" class="form-control" id="littlelink_name" name="littlelink_name" aria-describedby="littlelink_name" value="{{ $page->littlelink_name ?? "" }}" :value="old("littlelink_name")" required autofocus @unless($usernameCanBeChanged) disabled @endunless>
+                        </div>
+                        @unless($usernameCanBeChanged)
+                            <input type="hidden" name="littlelink_name" value="{{ $page->littlelink_name }}">
+                            <div class="alert alert-warning" role="alert">
+                                {{ $usernameRestrictionMessage }}
+                            </div>
+                        @elseif($nextUsernameChange)
+                            <small class="form-text text-muted">{{ __('messages.username_change_cooldown', ['date' => $nextUsernameChange->format('d/m/Y \à\s H:i')]) }}</small>
+                        @endunless
+                        <script>var exceptionvar = " value=\"{{ $page->littlelink_name }}\";</script>
+                        @include("auth.url-validation")
+
+                        @if($usernameHistory->isNotEmpty())
+                            <div class="mt-3">
+                                <h6>Histórico de nomes de usuário</h6>
+                                <ul class="list-group">
+                                    @foreach($usernameHistory as $history)
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>{{ $history->username }}</span>
+                                            <small class="text-muted">{{ \Carbon\Carbon::parse($history->changed_at)->format('d/m/Y \à\s H:i') }}</small>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+							
+							
                         </div>
                         <script>var exceptionvar = " value=\"{{ $page->littlelink_name }}\";</script>
                         @include("auth.url-validation")
@@ -352,22 +383,8 @@
                         <textarea class="form-control @if(env("ALLOW_USER_HTML") === true) ckeditor @endif" name="pageDescription" rows="3">{{ $page->littlelink_description ?? "" }}</textarea>
                     </div>
                 
-                    @if(auth()->user()->role == "admin" || auth()->user()->role == "vip")
-                        <div class="form-group col-lg-8">
-                        <h5 style="margin-top:50px"> {{__("messages.Show checkmark")}}</h5>
-                        <p class="text-muted">{{__("messages.disableverified")}}</p>
-                          <div class="mb-3 form-check form-switch">
-                            <input name="checkmark" class="switch toggle-btn" type="checkbox" 
-                            id="flexSwitchCheckChecked" value="{{ $page->littlelink_verified }}" @if($page->littlelink_verified === 1) checked @endif>
-                            <label class="form-check-label" for="flexSwitchCheckChecked">{{__("messages.Show checkmark")}}
-                            </label>
-                          </div>
-                        </div>
-                    @endif
-
-                    @if($page->littlelink_name != "")
-                        <button type="submit" class="btn btn-primary">{{__("messages.Save")}}</button>
-                    @endif
+          
+<button type="submit" class="btn btn-primary">{{__("messages.Save")}}</button>
                 </form>
                 @endforeach
 

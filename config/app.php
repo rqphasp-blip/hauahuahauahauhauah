@@ -215,9 +215,13 @@ return [
         /*
          * Leads01 Plugin Service Provider
          */
-		//App\Providers\plugins\leads01\Providers\Leads01ServiceProvider::class,
+		App\Providers\plugins\leads01\Providers\Leads01ServiceProvider::class,
          
-		
+		 /*
+         * Linktree Import Plugin Service Provider
+         */
+        App\Providers\plugins\linktreeimport\Providers\LinktreeImportServiceProvider::class,
+
 
 
 

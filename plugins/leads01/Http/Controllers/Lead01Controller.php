@@ -3,341 +3,313 @@
 namespace plugins\leads01\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use plugins\leads01\Models\LeadCampaign;
+use plugins\leads01\Models\LeadEntry;
 
 class Leads01Controller extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth')->except(['display', 'submit']);
-    }
+    public const FIELD_LIMIT = 10;
 
     public function index()
     {
-        $user = Auth::user();
+        $user = auth()->user();
 
-        $campaigns = DB::table('leads01_campaigns')
-            ->where('user_id', $user->id)
-            ->orderByDesc('created_at')
-            ->get();
+        $campaigns = LeadCampaign::where('user_id', $user->id)
+            ->withCount('entries')
+            ->latest()
+            ->paginate(15);
 
-        return view('leads01::campaigns.index', compact('campaigns'));
+        return view('leads01::index', compact('campaigns'));
     }
 
     public function create()
     {
-        return view('leads01::campaigns.form');
+        return view('leads01::create');
     }
 
     public function store(Request $request)
     {
-        $user = Auth::user();
+        $user = auth()->user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'thank_you_message' => ['nullable', 'string', 'max:500'],
-        ]);
+        $validated = $this->validateCampaign($request);
+        $fields = $this->validateFields($request);
 
-        $slug = Str::slug($validated['name']);
-        $baseSlug = $slug;
-        $suffix = 1;
-
-        while (DB::table('leads01_campaigns')->where('slug', $slug)->exists()) {
-            $slug = $baseSlug . '-' . $suffix++;
-        }
-
-        DB::table('leads01_campaigns')->insert([
+        $campaign = LeadCampaign::create([
             'user_id' => $user->id,
             'name' => $validated['name'],
-            'slug' => $slug,
+            'slug' => $this->uniqueSlug($validated['name']),
             'description' => $validated['description'] ?? null,
-            'thank_you_message' => $validated['thank_you_message'] ?? 'Obrigado! Em breve entraremos em contato.',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'thank_you_message' => $validated['thank_you_message'] ?? null,
+            'status' => $validated['status'],
         ]);
 
-        return redirect()->route('leads01.index')->with('success', 'Campanha criada com sucesso.');
+        $this->persistFields($campaign, $fields);
+
+        return redirect()->route('leads01.index')
+            ->with('success', 'Campanha criada e campos salvos com sucesso.');
     }
 
     public function edit(int $id)
     {
-        $campaign = $this->findCampaignForUser($id);
+        $campaign = $this->findCampaign($id);
 
-        if (!$campaign) {
-            return redirect()->route('leads01.index')->with('error', 'Campanha não encontrada.');
-        }
-
-        return view('leads01::campaigns.form', compact('campaign'));
+        return view('leads01::edit', [
+            'campaign' => $campaign,
+            'fields' => $campaign->fields()->orderBy('sort_order')->get(),
+        ]);
     }
 
     public function update(Request $request, int $id)
     {
-        $campaign = $this->findCampaignForUser($id);
+        $campaign = $this->findCampaign($id);
 
-        if (!$campaign) {
-            return redirect()->route('leads01.index')->with('error', 'Campanha não encontrada.');
-        }
+        $validated = $this->validateCampaign($request, $campaign->id);
+        $fields = $this->validateFields($request);
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'thank_you_message' => ['nullable', 'string', 'max:500'],
+        $campaign->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'thank_you_message' => $validated['thank_you_message'] ?? null,
+            'status' => $validated['status'],
         ]);
 
-        DB::table('leads01_campaigns')
-            ->where('id', $campaign->id)
-            ->update([
-                'name' => $validated['name'],
-                'description' => $validated['description'] ?? null,
-                'thank_you_message' => $validated['thank_you_message'] ?? 'Obrigado! Em breve entraremos em contato.',
-                'updated_at' => now(),
-            ]);
+        $this->persistFields($campaign, $fields);
 
-        return redirect()->route('leads01.index')->with('success', 'Campanha atualizada com sucesso.');
+        return redirect()->route('leads01.index')
+            ->with('success', 'Campanha atualizada e campos salvos com sucesso.');
     }
 
     public function destroy(int $id)
     {
-        $campaign = $this->findCampaignForUser($id);
+        $campaign = $this->findCampaign($id);
+        $campaign->delete();
 
-        if (!$campaign) {
-            return redirect()->route('leads01.index')->with('error', 'Campanha não encontrada.');
-        }
-
-        DB::transaction(function () use ($campaign) {
-            DB::table('leads01_fields')->where('campaign_id', $campaign->id)->delete();
-            DB::table('leads01_entries')->where('campaign_id', $campaign->id)->delete();
-            DB::table('leads01_campaigns')->where('id', $campaign->id)->delete();
-        });
-
-        return redirect()->route('leads01.index')->with('success', 'Campanha removida.');
+        return redirect()->route('leads01.index')
+            ->with('success', 'Campanha removida. Todos os leads e campos associados foram apagados.');
     }
 
-    public function fields(int $id)
+    public function leads(int $id)
     {
-        $campaign = $this->findCampaignForUser($id);
+        $campaign = $this->findCampaign($id);
 
-        if (!$campaign) {
-            return redirect()->route('leads01.index')->with('error', 'Campanha não encontrada.');
-        }
+        $leads = LeadEntry::where('campaign_id', $campaign->id)
+            ->latest()
+            ->paginate(20);
 
-        $fields = DB::table('leads01_fields')
-            ->where('campaign_id', $campaign->id)
-            ->orderBy('sort_order')
+        return view('leads01::leads.index', compact('campaign', 'leads'));
+    }
+
+    public function showLead(int $id, int $entryId)
+    {
+        $campaign = $this->findCampaign($id);
+
+        $lead = LeadEntry::where('campaign_id', $campaign->id)
+            ->where('id', $entryId)
+            ->firstOrFail();
+
+        $fields = $campaign->fields()->orderBy('sort_order')->get();
+
+        return view('leads01::leads.show', compact('campaign', 'lead', 'fields'));
+    }
+
+    public function publicList(string $username)
+    {
+        $user = User::where('name', $username)->firstOrFail();
+
+        $campaigns = LeadCampaign::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->orderBy('name')
             ->get();
 
-        return view('leads01::campaigns.fields', compact('campaign', 'fields'));
+        return view('leads01::public.list', compact('user', 'campaigns'));
     }
 
-    public function saveFields(Request $request, int $id)
+    public function publicForm(string $slug)
     {
-        $campaign = $this->findCampaignForUser($id);
+        $campaign = LeadCampaign::where('slug', $slug)
+            ->where('status', 'active')
+            ->firstOrFail();
 
-        if (!$campaign) {
-            return response()->json(['message' => 'Campanha inválida.'], 404);
+        $fields = $campaign->fields()->orderBy('sort_order')->get();
+
+        return view('leads01::public.form', compact('campaign', 'fields'));
+    }
+
+    public function submit(string $slug, Request $request)
+    {
+        $campaign = LeadCampaign::where('slug', $slug)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $fields = $campaign->fields()->orderBy('sort_order')->get();
+
+        if ($fields->isEmpty()) {
+            return redirect()->back()->with('error', 'Nenhum campo configurado para este formulário.');
         }
 
-        $fields = $request->input('fields');
+        $validation = [];
+        foreach ($fields as $field) {
+            $rules = $field->required ? ['required'] : ['nullable'];
+
+            switch ($field->field_type) {
+                case 'email':
+                    $rules[] = 'email';
+                    $rules[] = 'max:150';
+                    break;
+                case 'number':
+                    $rules[] = 'numeric';
+                    break;
+                case 'tel':
+                    $rules[] = 'string';
+                    $rules[] = 'max:30';
+                    break;
+                case 'textarea':
+                    $rules[] = 'string';
+                    $rules[] = 'max:2000';
+                    break;
+                case 'select':
+                    $rules[] = 'string';
+                    $rules[] = 'max:150';
+                    break;
+                default:
+                    $rules[] = 'string';
+                    $rules[] = 'max:255';
+                    break;
+            }
+
+            $validation[$field->field_name] = $rules;
+        }
+
+        $data = $request->validate($validation);
+
+        LeadEntry::create([
+            'campaign_id' => $campaign->id,
+            'user_id' => $campaign->user_id,
+            'data' => $data,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        $message = trim((string) $campaign->thank_you_message);
+
+        return redirect()->back()
+            ->with('success', $message !== '' ? $message : 'Obrigado! Em breve entraremos em contato.');
+    }
+
+    protected function validateCampaign(Request $request, ?int $campaignId = null): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'thank_you_message' => ['nullable', 'string', 'max:1000'],
+            'status' => ['required', 'in:active,inactive'],
+        ]);
+    }
+
+    protected function validateFields(Request $request): array
+    {
+        $fields = $request->input('fields', []);
 
         if (!is_array($fields) || count($fields) === 0) {
-            return response()->json(['message' => 'Informe ao menos um campo.'], 422);
+            throw ValidationException::withMessages([
+                'fields' => 'Adicione pelo menos um campo para o formulário.',
+            ]);
         }
 
-        if (count($fields) > 10) {
-            return response()->json(['message' => 'Você pode configurar no máximo 10 campos.'], 422);
+        if (count($fields) > self::FIELD_LIMIT) {
+            throw ValidationException::withMessages([
+                'fields' => 'Você pode cadastrar no máximo ' . self::FIELD_LIMIT . ' campos.',
+            ]);
         }
 
         $prepared = [];
         $usedNames = [];
 
         foreach ($fields as $index => $field) {
-            $label = trim($field['label'] ?? '');
-            $baseName = Str::slug($field['name'] ?? $label, '_');
+            $label = trim((string) ($field['label'] ?? ''));
+            $type = $field['field_type'] ?? 'text';
+            $placeholder = $field['placeholder'] ?? null;
+            $options = $field['options'] ?? [];
+            if (is_array($options) && count($options) === 1 && is_string($options[0])) {
+                $options = preg_split('/\r?\n/', $options[0]);
+            }
+            if (is_string($options)) {
+                $options = preg_split('/\r?\n/', $options);
+            }
+            $required = !empty($field['required']);
 
-            if ($baseName === '') {
-                $baseName = 'campo_' . $index;
+            if ($label === '') {
+                throw ValidationException::withMessages([
+                    'fields.' . $index . '.label' => 'Informe um rótulo para o campo ' . ($index + 1) . '.',
+                ]);
             }
 
-            $name = $baseName;
+            $nameBase = Str::slug($field['field_name'] ?? $label, '_');
+            if ($nameBase === '') {
+                $nameBase = 'campo_' . ($index + 1);
+            }
+
+            $name = $nameBase;
             $suffix = 1;
             while (in_array($name, $usedNames, true)) {
-                $name = $baseName . '_' . $suffix++;
+                $name = $nameBase . '_' . $suffix++;
             }
-
             $usedNames[] = $name;
 
+            if ($type === 'select') {
+                if (!is_array($options) || count(array_filter($options)) < 2) {
+                    throw ValidationException::withMessages([
+                        'fields.' . $index . '.options' => 'Cadastre ao menos duas opções para campos do tipo select.',
+                    ]);
+                }
+            }
+
             $prepared[] = [
-                'label' => $label !== '' ? $label : 'Campo ' . ($index + 1),
+                'label' => $label,
                 'field_name' => $name,
-                'field_type' => $field['type'] ?? 'text',
-                'required' => !empty($field['required']) ? 1 : 0,
-                'placeholder' => $field['placeholder'] ?? null,
-                'options' => isset($field['options']) ? json_encode($field['options']) : null,
+                'field_type' => in_array($type, ['text', 'email', 'number', 'tel', 'textarea', 'select'], true) ? $type : 'text',
+                'required' => $required,
+                'placeholder' => $placeholder !== null ? trim((string) $placeholder) : null,
+                'options' => $type === 'select' ? array_values(array_filter($options, fn ($opt) => trim((string) $opt) !== '')) : null,
                 'sort_order' => $index,
             ];
         }
 
-        DB::transaction(function () use ($campaign, $prepared) {
-            DB::table('leads01_fields')->where('campaign_id', $campaign->id)->delete();
-
-            foreach ($prepared as $field) {
-                DB::table('leads01_fields')->insert([
-                    'campaign_id' => $campaign->id,
-                    'label' => $field['label'],
-                    'field_name' => $field['field_name'],
-                    'field_type' => $field['field_type'],
-                    'required' => $field['required'],
-                    'placeholder' => $field['placeholder'],
-                    'options' => $field['options'],
-                    'sort_order' => $field['sort_order'],
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        });
-
-        return response()->json(['message' => 'Campos salvos com sucesso.']);
+        return $prepared;
     }
 
-    public function leads(int $id)
+    protected function persistFields(LeadCampaign $campaign, array $fields): void
     {
-        $campaign = $this->findCampaignForUser($id);
-
-        if (!$campaign) {
-            return redirect()->route('leads01.index')->with('error', 'Campanha não encontrada.');
-        }
-
-        $entries = DB::table('leads01_entries')
-            ->where('campaign_id', $campaign->id)
-            ->orderByDesc('created_at')
-            ->paginate(20);
-
-        return view('leads01::leads.index', compact('campaign', 'entries'));
-    }
-
-    public function lead(int $id, int $entryId)
-    {
-        $campaign = $this->findCampaignForUser($id);
-
-        if (!$campaign) {
-            return redirect()->route('leads01.index')->with('error', 'Campanha não encontrada.');
-        }
-
-        $entry = DB::table('leads01_entries')
-            ->where('campaign_id', $campaign->id)
-            ->where('id', $entryId)
-            ->first();
-
-        if (!$entry) {
-            return redirect()->route('leads01.leads', $campaign->id)->with('error', 'Lead não encontrado.');
-        }
-
-        $fields = DB::table('leads01_fields')
-            ->where('campaign_id', $campaign->id)
-            ->orderBy('sort_order')
-            ->get();
-
-        $data = collect(json_decode($entry->data, true) ?: []);
-
-        return view('leads01::leads.show', compact('campaign', 'entry', 'fields', 'data'));
-    }
-
-    public function display(string $slug)
-    {
-        $campaign = DB::table('leads01_campaigns')
-            ->where('slug', $slug)
-            ->first();
-
-        if (!$campaign) {
-            abort(404);
-        }
-
-        $fields = DB::table('leads01_fields')
-            ->where('campaign_id', $campaign->id)
-            ->orderBy('sort_order')
-            ->get();
-
-        return view('leads01::display.modal', compact('campaign', 'fields'));
-    }
-
-    public function submit(Request $request, string $slug)
-    {
-        $campaign = DB::table('leads01_campaigns')
-            ->where('slug', $slug)
-            ->first();
-
-        if (!$campaign) {
-            return response()->json(['message' => 'Campanha inválida.'], 404);
-        }
-
-        $fields = DB::table('leads01_fields')
-            ->where('campaign_id', $campaign->id)
-            ->orderBy('sort_order')
-            ->get();
-
-        if ($fields->isEmpty()) {
-            return response()->json(['message' => 'Nenhum campo configurado.'], 422);
-        }
-
-        $rules = [];
-        $messages = [];
+        $campaign->fields()->delete();
 
         foreach ($fields as $field) {
-            $fieldRules = [];
-
-            if ($field->required) {
-                $fieldRules[] = 'required';
-                $messages[$field->field_name . '.required'] = $field->label . ' é obrigatório.';
-            }
-
-            if ($field->field_type === 'email') {
-                $fieldRules[] = 'email';
-                $messages[$field->field_name . '.email'] = 'Informe um e-mail válido.';
-            }
-
-            if ($field->field_type === 'tel') {
-                $fieldRules[] = 'string';
-                $fieldRules[] = 'max:20';
-            }
-
-            if (!empty($fieldRules)) {
-                $rules[$field->field_name] = $fieldRules;
-            }
+            $campaign->fields()->create($field);
         }
-
-        $validator = Validator::make($request->all(), $rules, $messages);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Houve um problema ao enviar seus dados.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        DB::table('leads01_entries')->insert([
-            'campaign_id' => $campaign->id,
-            'data' => json_encode($request->only($fields->pluck('field_name')->all())),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json([
-            'message' => $campaign->thank_you_message ?? 'Obrigado! Em breve entraremos em contato.',
-        ]);
     }
 
-    protected function findCampaignForUser(int $id)
+    protected function findCampaign(int $id): LeadCampaign
     {
-        $user = Auth::user();
+        $user = auth()->user();
 
-        return DB::table('leads01_campaigns')
+        return LeadCampaign::where('user_id', $user->id)
             ->where('id', $id)
-            ->where('user_id', $user->id)
-            ->first();
+            ->firstOrFail();
+    }
+
+    protected function uniqueSlug(string $name): string
+    {
+        $slug = Str::slug($name);
+        $base = $slug;
+        $suffix = 1;
+
+        while (LeadCampaign::where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $suffix++;
+        }
+
+        return $slug;
     }
 }

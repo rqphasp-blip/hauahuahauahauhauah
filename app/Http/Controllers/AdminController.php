@@ -28,6 +28,7 @@ use App\Models\Button;
 use App\Models\Link;
 use App\Models\Page;
 use App\Models\UserData;
+use App\Models\VerificationBadge;
 
 class AdminController extends Controller
 {
@@ -233,6 +234,7 @@ public function SendTestMail(Request $request)
             UserData::saveData($id, 'checkmark', true);
         } elseif ($status == 'user') {
             $verify = 'user';
+			 UserData::saveData($id, 'checkmark', false);
         }
 
         User::where('id', $id)->update(['role' => $verify]);
@@ -339,7 +341,7 @@ public function SendTestMail(Request $request)
         $id = $request->id;
 
         $data['user'] = User::where('id', $id)->get();
-
+		$data['badges'] = VerificationBadge::orderBy('name')->get();
         return view('panel/edit-user', $data);
     }
 
@@ -385,11 +387,10 @@ public function SendTestMail(Request $request)
         $customBackground = $request->file('background');
         $theme = $request->theme;
 
-        if(User::where('id', $id)->get('role')->first()->role =! $role) {
-            if ($role == 'vip') {
-                UserData::saveData($id, 'checkmark', true);
-            }
-        }
+         $checkmark = $request->boolean('checkmark');
+        $verificationBadgeId = $request->filled('verification_badge_id')
+            ? (int) $request->input('verification_badge_id')
+            : null;
 
         if ($request->password == '') {
             User::where('id', $id)->update(['name' => $name, 'email' => $email, 'littlelink_name' => $littlelink_name, 'littlelink_description' => $littlelink_description, 'role' => $role, 'theme' => $theme]);
@@ -411,6 +412,9 @@ public function SendTestMail(Request $request)
     
             $customBackground->move(base_path('assets/img/background-img/'), $id . '_' . time() . "." . $request->file('background')->extension());
         } 
+		
+		 UserData::saveData($id, 'checkmark', $checkmark);
+        UserData::saveData($id, 'verification_badge_id', $verificationBadgeId);
 
         return redirect('admin/users/all');
     }

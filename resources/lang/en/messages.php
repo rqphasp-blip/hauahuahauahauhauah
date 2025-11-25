@@ -360,6 +360,8 @@ return [
     'disablesharebutton' => 'This setting allows you to hide the share button on your page.',
     'Open links in new tab' => 'Open links in new tab',
     'openlinksnewtab' => 'This setting determines if your links on your links page get opened in the same or a new tab.',
+	'verified_username_locked' => 'Verified users cannot change their username.',
+    'username_change_cooldown' => 'You can change your username again on :date.',
 
 
     /*
@@ -1102,9 +1104,27 @@ return [
 
     
     #=============================================================================#
+    # Verificado                                            #
+    #=============================================================================#
+  'Verification badges' => 'Verification badges',
+    'Badge name' => 'Badge name',
+    'Badge description' => 'Badge description (used as alt text)',
+    'Badge icon' => 'Badge icon',
+    'Verification badge help' => 'PNG, JPG, WEBP or SVG icons up to 3MB.',
+    'Save badge' => 'Save badge',
+    'Available badges' => 'Available badges',
+    'No verification badges yet' => 'No verification badges yet',
+    'Verification badge created' => 'Verification badge created successfully.',
+    'Verification badge deleted' => 'Verification badge removed successfully.',
+    'Verification badge selection' => 'Verification badge selection',
+    'Default verification badge' => 'Use the default verification badge',
+    'Verification badge selection help' => 'Pick which badge variant should show for this verified profile.',
+    'Actions' => 'Actions',
+	
+	
+	  #=============================================================================#
     # Laravel internal translations                                               #
     #=============================================================================#
-
 
     /*
     |--------------------------------------------------------------------------

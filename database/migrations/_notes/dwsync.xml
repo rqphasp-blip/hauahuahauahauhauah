@@ -8,4 +8,7 @@
 <file name="2024_07_01_000200_add_image_path_to_user_products_table.php" server="216.238.111.244" local="134080242638319283" remote="134080350600000000" Dst="0" />
 <file name="2024_07_01_000100_create_user_products_tables.php" server="216.238.111.244" local="134080242285967944" remote="134080350000000000" Dst="0" />
 <file name="2024_07_01_000300_add_catolog_enabled_to_user_product_settings_table.php" server="216.238.111.244" local="134080244659887641" remote="134080352400000000" Dst="0" />
+<file name="2025_05_09_000000_create_verification_badges_table.php" server="216.238.111.244" local="134085412649643205" remote="134085520200000000" Dst="0" />
+<file name="2019_08_19_000000_create_failed_jobs_table.php" server="216.238.111.244" local="133914924000000000" remote="133914924000000000" Dst="0" />
+<file name="2024_06_02_000000_add_username_history_fields.php" server="216.238.111.244" local="134085560829025529" remote="134085668400000000" Dst="0" />
 </dwsync>

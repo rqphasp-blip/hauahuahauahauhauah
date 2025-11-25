@@ -346,6 +346,8 @@ return array(
 	'disableverified' => 'Você é um usuário verificado. Essa configuração permite ocultar a marca de verificação em sua página.',
 	'Show share button' => 'Mostrar botão de compartilhamento',
 	'disablesharebutton' => 'Essa configuração permite ocultar o botão de compartilhamento em sua página.',
+	'verified_username_locked' => 'Usuários verificados não podem alterar o nome de usuário.',
+    'username_change_cooldown' => 'Você poderá alterar seu nome de usuário novamente em :date.',
 /*
 |--------------------------------------------------------------------------
 | Personal Settings Page
@@ -1043,9 +1045,33 @@ return array(
 	'footer.Contact' => 'Contato',
 
 #=============================================================================#
-# Laravel internal translations                                               #
+# Verificado                                             #
 #=============================================================================#
 
+'previous' => 'Anterior',
+        'next' => 'Próximo',
+
+        'Verification badges' => 'Selos de verificação',
+        'Badge name' => 'Nome do selo',
+        'Badge description' => 'Descrição do selo (usada no alt da imagem)',
+        'Badge icon' => 'Ícone do selo',
+        'Verification badge help' => 'Ícones PNG, JPG, WEBP ou SVG de até 3MB.',
+        'Save badge' => 'Salvar selo',
+        'Available badges' => 'Selos disponíveis',
+        'No verification badges yet' => 'Nenhum selo de verificação ainda',
+        'Verification badge created' => 'Selo de verificação criado com sucesso.',
+        'Verification badge deleted' => 'Selo de verificação removido com sucesso.',
+        'Verification badge selection' => 'Seleção do selo de verificação',
+        'Default verification badge' => 'Usar o selo de verificação padrão',
+        'Verification badge selection help' => 'Escolha qual selo deve aparecer para este perfil verificado.',
+        'Actions' => 'Ações',
+
+        'Add new link' => 'Adicionar novo link',	
+	
+	#=============================================================================#
+# Laravel internal translations                                               #
+#=============================================================================#
+	
 /*
 |--------------------------------------------------------------------------
 | Authentication Language Lines

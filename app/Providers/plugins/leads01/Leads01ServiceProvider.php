@@ -16,26 +16,23 @@ class Leads01ServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $pluginPath = base_path('plugins/leads01');
-
-        if (file_exists($pluginPath . '/routes.php')) {
-            $this->loadRoutesFrom($pluginPath . '/routes.php');
+         if (file_exists(base_path('plugins/leads01/routes.php'))) {
+            $this->loadRoutesFrom(base_path('plugins/leads01/routes.php'));
         }
+        $this->loadViewsFrom(base_path('plugins/leads01/resources/views'), 'leads01');
+        $this->loadMigrationsFrom(base_path('plugins/leads01/database/migrations'));
 
-        if (is_dir($pluginPath . '/views')) {
-            View::addNamespace('leads01', $pluginPath . '/views');
-        }
+        $this->publishes([
+            base_path('plugins/leads01/resources/views') => resource_path('views/leads01'),
+        ], 'leads01-views');
 
-        if (file_exists($pluginPath . '/create_leads01_tables.php')) {
+        $this->publishes([
+            base_path('plugins/leads01/database/migrations') => database_path('migrations'),
+        ], 'leads01-migrations');
+
             $this->publishes([
-                $pluginPath . '/create_leads01_tables.php' => database_path('migrations/' . date('Y_m_d_His') . '_create_leads01_tables.php'),
+                $pluginPath . '/database/migrations/2024_01_01_000000_create_lead_capture_tables.php' => database_path('migrations/' . date('Y_m_d_His') . '_create_lead_capture_tables.php'),
             ], 'leads01-migrations');
-        }
-
-        if (is_dir($pluginPath . '/views')) {
-            $this->publishes([
-                $pluginPath . '/views' => resource_path('views/vendor/leads01'),
-            ], 'leads01-views');
         }
     }
 }

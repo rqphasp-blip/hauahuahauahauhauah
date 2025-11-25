@@ -25,6 +25,8 @@ use App\Models\Button;
 use App\Models\Link;
 use App\Models\LinkType;
 use App\Models\UserData;
+use App\Models\UsernameHistory;
+use Carbon\Carbon;
 
 
 //Function tests if string starts with certain string (used to test for illegal strings)
@@ -597,6 +599,29 @@ class UserController extends Controller
 
         $data['pages'] = User::where('id', $userId)->select('littlelink_name', 'littlelink_description','littlelink_seotags','littlelink_ga4','littlelink_pixel', 'image', 'name','theme', 'role', 'block','remember_token','created_at','updated_at','theme','auth_as','provider','provider_id','image','imagem_topo', 'data_topo','topo_status', 'profile_banner_path','profile_photo_path','dashboard_image_path','hide_title','size_title','feature_avatar_align', 'feature_avatar_shape','feature_avatar_position_status','feature_imagem_topo_url','feature_imagem_topo_status','feature_stories_json','feature_stories_status','feature_maps_address','feature_maps_coordinates','feature_maps_zoom','feature_maps_status','feature_maps_place_id','feature_maps_reviews_min_rating','feature_maps_reviews_max_rows','feature_maps_reviews_status','feature_instagram_username','feature_instagram_post_count','feature_instagram_feed_status','littlelink_seo','littlelink_maps','littlelink_taggoogle','subtitulo','seo_image','seo_desc')->get();
 
+		
+		$lastUsernameChange = Auth::user()->littlelink_name_changed_at ? Carbon::parse(Auth::user()->littlelink_name_changed_at) : null;
+        $nextUsernameChange = $lastUsernameChange?->copy()->addDays(30);
+
+        $data['usernameCanBeChanged'] = true;
+        $data['usernameRestrictionMessage'] = null;
+        $data['nextUsernameChange'] = $nextUsernameChange;
+
+        if (UserData::getData($userId, 'checkmark') === true) {
+            $data['usernameCanBeChanged'] = false;
+            $data['usernameRestrictionMessage'] = __('messages.verified_username_locked');
+        } elseif ($lastUsernameChange && $lastUsernameChange->gt(now()->subDays(30))) {
+            $data['usernameCanBeChanged'] = false;
+            $data['usernameRestrictionMessage'] = __('messages.username_change_cooldown', ['date' => $nextUsernameChange->format('d/m/Y \à\s H:i')]);
+        }
+
+        $data['usernameHistory'] = UsernameHistory::where('user_id', $userId)
+            ->orderByDesc('changed_at')
+            ->get();
+		
+		
+		
+		
         return view('/studio/page', $data);
     }
 
@@ -627,7 +652,7 @@ class UserController extends Controller
         }
     
         $profilePhoto = $request->file('image');
-        $pageName = $request->littlelink_name;
+        $pageName = $request->littlelink_name ?? $littlelink_name;
         $pageDescription = strip_tags($request->pageDescription, '<a><p><strong><i><ul><ol><li><blockquote><h2><h3><h4>');
         $pageDescription = preg_replace("/<a([^>]*)>/i", "<a $1 rel=\"noopener noreferrer nofollow\">", $pageDescription);
         $pageDescription = strip_tags_except_allowed_protocols($pageDescription);
@@ -635,23 +660,56 @@ class UserController extends Controller
 		$pageseotags = $request->pageseotags;
 		$pagega4 = $request->pagega4;
 		$pagepixel = $request->pagepixel;
-        $checkmark = $request->checkmark;
+        $checkmark = $request->boolean('checkmark');
         $sharebtn = $request->sharebtn;
         $tablinks = $request->tablinks;
+ $canUpdateUsername = false;
+
+        if ($pageName !== $littlelink_name) {
+            if (UserData::getData($userId, 'checkmark') === true) {
+                return redirect('/studio/page')->withErrors([
+                    'littlelink_name' => __('messages.verified_username_locked'),
+                ])->withInput();
+            }
+
+            $lastUsernameChange = Auth::user()->littlelink_name_changed_at ? Carbon::parse(Auth::user()->littlelink_name_changed_at) : null;
+            $nextUsernameChange = $lastUsernameChange?->copy()->addDays(30);
+
+            if ($lastUsernameChange && $lastUsernameChange->gt(now()->subDays(30))) {
+                return redirect('/studio/page')->withErrors([
+                    'littlelink_name' => __('messages.username_change_cooldown', ['date' => $nextUsernameChange->format('d/m/Y \à\s H:i')]),
+                ])->withInput();
+            }
+
+            $canUpdateUsername = true;
+        }
 
         if(env('HOME_URL') !== '' && $pageName != $littlelink_name && $littlelink_name == env('HOME_URL')){
             EnvEditor::editKey('HOME_URL', $pageName);
         }
-    
-        User::where('id', $userId)->update([
-            'littlelink_name' => $pageName,
+
+        $updateData = [
             'littlelink_description' => $pageDescription,
-			'littlelink_seotags' => $pageseotags,
-			'littlelink_ga4' => $pagega4,
-			'littlelink_pixel' => $pagepixel,
-            'name' => $name
-        ]);
-    
+                        'littlelink_seotags' => $pageseotags,
+                        'littlelink_ga4' => $pagega4,
+                        'littlelink_pixel' => $pagepixel,
+            'name' => $name,
+        ];
+
+        if ($canUpdateUsername) {
+            $updateData['littlelink_name'] = $pageName;
+            $updateData['littlelink_name_changed_at'] = now();
+
+            if (!empty($littlelink_name)) {
+                UsernameHistory::create([
+                    'user_id' => $userId,
+                    'username' => $littlelink_name,
+                    'changed_at' => now(),
+                ]);
+            }
+        }
+
+        User::where('id', $userId)->update($updateData);
         if ($request->hasFile('image')) {
 
             // Delete the user's current avatar if it exists
@@ -664,11 +722,7 @@ class UserController extends Controller
             $profilePhoto->move(base_path('assets/img'), $fileName);
         }
     
-        if ($checkmark == "on") {
-            UserData::saveData($userId, 'checkmark', true);
-        } else {
-            UserData::saveData($userId, 'checkmark', false);
-        }
+UserData::saveData($userId, 'checkmark', $checkmark);
     
         if ($sharebtn == "on") {
             UserData::saveData($userId, 'disable-sharebtn', false);

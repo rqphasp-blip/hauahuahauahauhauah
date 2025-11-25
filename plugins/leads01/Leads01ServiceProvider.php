@@ -2,39 +2,39 @@
 
 namespace plugins\leads01\Providers;
 
-use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use plugins\leads01\Leads01Controller;
 
 class Leads01ServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(Leads01Controller::class, fn () => new Leads01Controller());
+        // Additional bindings can be registered here if needed in the future.
     }
 
     public function boot(): void
     {
-        $basePath = __DIR__ . '/..';
+        $this->registerRoutes();
 
-        $routes = $basePath . '/routes.php';
-        if (file_exists($routes)) {
-            $this->loadRoutesFrom($routes);
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'leads01');
+
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
+        $this->publishes([
+            __DIR__ . '/../public' => public_path('vendor/leads01'),
+        ], 'public');
+    }
+
+    protected function registerRoutes(): void
+    {
+        if (file_exists(__DIR__ . '/../routes/web.php')) {
+            Route::middleware(['web', 'auth'])
+                ->group(__DIR__ . '/../routes/web.php');
         }
 
-        $viewsPath = $basePath . '/views';
-        if (is_dir($viewsPath)) {
-            View::addNamespace('leads01', $viewsPath);
-            $this->publishes([
-                $viewsPath => resource_path('views/vendor/leads01'),
-            ], 'leads01-views');
-        }
-
-        $migration = $basePath . '/database/create_leads01_tables.php';
-        if (file_exists($migration)) {
-            $this->publishes([
-                $migration => database_path('migrations/' . date('Y_m_d_His') . '_create_leads01_tables.php'),
-            ], 'leads01-migrations');
+        if (file_exists(__DIR__ . '/../routes/public.php')) {
+            Route::middleware(['web'])
+                ->group(__DIR__ . '/../routes/public.php');
         }
     }
 }

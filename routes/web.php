@@ -10,6 +10,7 @@ use App\Http\Controllers\PagesController;
 use App\Http\Controllers\InstallerController;
 use App\Http\Controllers\Admin\PluginController;
 use App\Http\Controllers\AppearanceSettingsController; // Adicionado para a nova rota
+use App\Http\Controllers\VerificationBadgeController;
 
 
 /*
@@ -33,6 +34,25 @@ use App\Http\Controllers\AppearanceSettingsController; // Adicionado para a nova
 
 
 use App\Providers\plugins\googlereviews\GooglereviewsController;
+use App\Providers\plugins\leads01\Leads01Controller;
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/leads01', [Leads01Controller::class, 'index'])->name('leads01.index');
+    Route::get('/leads01/create', [Leads01Controller::class, 'create'])->name('leads01.create');
+    Route::post('/leads01', [Leads01Controller::class, 'store'])->name('leads01.store');
+    Route::get('/leads01/{id}/edit', [Leads01Controller::class, 'edit'])->name('leads01.edit');
+    Route::put('/leads01/{id}', [Leads01Controller::class, 'update'])->name('leads01.update');
+    Route::delete('/leads01/{id}', [Leads01Controller::class, 'destroy'])->name('leads01.destroy');
+    Route::get('/leads01/{id}/leads', [Leads01Controller::class, 'leads'])->name('leads01.leads');
+    Route::get('/leads01/{id}/leads/{entryId}', [Leads01Controller::class, 'showLead'])->name('leads01.leads.show');
+});
+
+Route::middleware(['web'])->group(function () {
+    Route::get('/user/{username}/leads01', [Leads01Controller::class, 'publicList'])->name('leads01.public');
+    Route::get('/leads01/form/{slug}', [Leads01Controller::class, 'publicForm'])->name('leads01.public.form');
+    Route::post('/leads01/form/{slug}', [Leads01Controller::class, 'submit'])->name('leads01.public.submit');
+});
+
 
 
 
@@ -55,6 +75,15 @@ Route::post('/user/{username}/products/orders', [ProductsController::class, 'sto
 
 
 
+use plugins\highlights\HighlightsController;
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/highlights', [HighlightsController::class, 'index'])->name('highlights.index');
+    Route::get('/highlights/create', [HighlightsController::class, 'create'])->name('highlights.create');
+    Route::post('/highlights', [HighlightsController::class, 'store'])->name('highlights.store');
+    Route::get('/highlights/{id}', [HighlightsController::class, 'show'])->name('highlights.show');
+    Route::delete('/highlights/{id}', [HighlightsController::class, 'destroy'])->name('highlights.destroy');
+});
 
 
 
@@ -306,6 +335,9 @@ Route::group([
     Route::get('/theme-updater', function () {return view('studio/theme-updater', []);});
     Route::get('/update', function () {return view('update', []);});
     Route::get('/backup', function () {return view('backup', []);});
+	Route::get('/admin/verification-badges', [VerificationBadgeController::class, 'index'])->name('verification-badges.index');
+    Route::post('/admin/verification-badges', [VerificationBadgeController::class, 'store'])->name('verification-badges.store');
+    Route::delete('/admin/verification-badges/{verificationBadge}', [VerificationBadgeController::class, 'destroy'])->name('verification-badges.destroy');
 
     Route::group(['namespace'=>'App\Http\Controllers\Admin', 'prefix'=>'admin', 'as'=>'admin'],function() {
         //Route::resource('/admin/linktype', LinkTypeController::class);

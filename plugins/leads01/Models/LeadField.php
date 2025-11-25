@@ -2,30 +2,26 @@
 
 namespace plugins\leads01\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LeadField extends Model
 {
-    use HasFactory;
+    protected $table = 'leads01_fields';
 
     protected $fillable = [
         'campaign_id',
         'label',
-        'type',
+        'field_name',
+        'field_type',
         'required',
-        'order',
+        'placeholder',
+        'options',
+        'sort_order',
     ];
 
     protected $casts = [
-        'campaign_id' => 'integer',
         'required' => 'boolean',
-        'order' => 'integer',
+        'options' => 'array',
+        'sort_order' => 'integer',
     ];
-
-    public function campaign(): BelongsTo
-    {
-        return $this->belongsTo(LeadCampaign::class, 'campaign_id');
-    }
 }

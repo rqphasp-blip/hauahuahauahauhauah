@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use plugins\leads01\Leads01Controller;
+use App\Providers\plugins\leads01\Leads01Controller;
 
 Route::middleware(['web', 'auth'])->prefix('leads01')->name('leads01.')->group(function () {
     Route::get('/', [Leads01Controller::class, 'index'])->name('index');

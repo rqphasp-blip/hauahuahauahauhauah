@@ -2,42 +2,27 @@
 
 namespace plugins\leads01\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\User;
 
 class LeadEntry extends Model
 {
-    use HasFactory;
+    protected $table = 'leads01_entries';
 
     protected $fillable = [
         'campaign_id',
+        'user_id',
         'data',
+        'ip_address',
+        'user_agent',
     ];
 
     protected $casts = [
-        'campaign_id' => 'integer',
         'data' => 'array',
     ];
 
-    public function campaign(): BelongsTo
+    public function user()
     {
-        return $this->belongsTo(LeadCampaign::class, 'campaign_id');
-    }
-
-    protected function decodedData(): Attribute
-    {
-        return Attribute::get(function (): array {
-            $data = $this->data;
-
-            if (is_array($data)) {
-                return $data;
-            }
-
-            $decoded = json_decode((string) $data, true);
-
-            return is_array($decoded) ? $decoded : [];
-        });
+        return $this->belongsTo(User::class);
     }
 }
