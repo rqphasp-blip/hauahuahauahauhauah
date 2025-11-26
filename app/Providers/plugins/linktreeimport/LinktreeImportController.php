@@ -9,6 +9,7 @@ use App\Models\UserData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -56,11 +57,13 @@ class LinktreeImportController extends Controller
             return redirect()->back()->with('error', 'Não encontramos links para importar neste perfil.');
         }
 
+        $importBatchId = (string) Str::uuid();
+
         $avatarPath = $this->downloadAvatar($parsedProfile['avatar_url'] ?? null, $user->id);
 
         $this->updateUserProfile($user->id, $parsedProfile, $avatarPath);
 
-        $importedLinks = $this->persistLinks($user->id, $parsedProfile['links']);
+        $importedLinks = $this->persistLinks($user->id, $parsedProfile['links'], $importBatchId, $request->profile_url);
 
         if (empty($importedLinks)) {
             return redirect()->back()->with('error', 'Não foi possível adicionar os links importados ao seu perfil.');
@@ -70,10 +73,11 @@ class LinktreeImportController extends Controller
             'source_url' => $request->profile_url,
             'display_name' => $parsedProfile['display_name'] ?? null,
             'bio' => $parsedProfile['bio'] ?? null,
-			'seo_description' => $parsedProfile['seo_description'] ?? null,
+            'seo_description' => $parsedProfile['seo_description'] ?? null,
             'headings' => $parsedProfile['headings'] ?? [],
             'avatar_path' => $avatarPath,
             'links' => $importedLinks,
+            'import_batch_id' => $importBatchId,
             'imported_at' => now()->toDateTimeString(),
         ]);
 
@@ -105,9 +109,8 @@ class LinktreeImportController extends Controller
 
     protected function parseLinktreeProfile(string $html): array
     {
-          
-		$html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
-		$profileData = null;
+        $html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
+        $profileData = null;
         $profile = [
             'display_name' => null,
             'bio' => null,
@@ -116,7 +119,6 @@ class LinktreeImportController extends Controller
             'links' => [],
             'headings' => [],
         ];
-
 
         $initialData = $this->extractInitialData($html);
 
@@ -128,7 +130,7 @@ class LinktreeImportController extends Controller
                 $profile['display_name'] = $this->stripBranding($profileData['title']);
             }
 
-             if (isset($profileData['description'])) {
+            if (isset($profileData['description'])) {
                 $description = $this->stripBranding($profileData['description']);
                 if (! isset($profileData['dynamicMetaDescription']) || $description !== $this->stripBranding($profileData['dynamicMetaDescription'])) {
                     $profile['bio'] = $description;
@@ -166,7 +168,7 @@ class LinktreeImportController extends Controller
             $profile['avatar_url'] = $domAvatar;
         }
 
-         if (! $profile['display_name']) {
+        if (! $profile['display_name']) {
             $profile['display_name'] = $this->stripBranding(
                 $this->extractMetaContent($html, 'og:title')
                 ?? $this->extractMetaContent($html, 'twitter:title')
@@ -187,9 +189,8 @@ class LinktreeImportController extends Controller
 
             $profile['bio'] = $this->stripBranding($metaDescription);
         }
-		
-		
-		 if ($profile['bio'] && $profile['seo_description'] && $profile['bio'] === $profile['seo_description']) {
+
+        if ($profile['bio'] && $profile['seo_description'] && $profile['bio'] === $profile['seo_description']) {
             $profile['bio'] = null;
         }
 
@@ -201,6 +202,8 @@ class LinktreeImportController extends Controller
         if (empty($profile['links'])) {
             $profile['links'] = $this->extractLinksFromMarkup($html);
         }
+
+        $profile['links'] = $this->deduplicateSocialIcons($profile['links']);
 
         return $profile;
     }
@@ -250,23 +253,59 @@ class LinktreeImportController extends Controller
             /** @var \DOMElement $anchor */
             $href = $anchor->getAttribute('href');
             $title = $this->stripBranding(trim($anchor->textContent));
+            $isSocialIcon = strtolower($anchor->getAttribute('data-testid')) === 'socialicon';
 
-            if (filter_var($href, FILTER_VALIDATE_URL) && $title !== '') {
-                if ($this->shouldSkipLink($title, $href)) {
-                    continue;
+            if ($title === '' && $isSocialIcon) {
+                $title = $this->stripBranding($anchor->getAttribute('title') ?: $anchor->getAttribute('aria-label'));
+
+                if ($title === '') {
+                    foreach ($anchor->getElementsByTagName('title') as $titleNode) {
+                        $title = $this->stripBranding($titleNode->textContent);
+
+                        if ($title !== '') {
+                            break;
+                        }
+                    }
                 }
-
-                $links[] = [
-                    'title' => $title,
-                    'url' => $href,
-                ];
             }
+
+            if (! filter_var($href, FILTER_VALIDATE_URL) || ($title === '' && ! $isSocialIcon)) {
+                continue;
+            }
+
+            if ($this->shouldSkipLink($title, $href)) {
+                continue;
+            }
+
+            $icon = $this->mapSocialIcon($href);
+
+            if ($icon) {
+                $links[] = $this->buildIconLink($icon, $href);
+                continue;
+            }
+
+            $links[] = [
+                'title' => $title,
+                'url' => $href,
+            ];
         }
 
         return $links;
     }
 
-      protected function prepareLinkFromArray(array $link): ?array
+    protected function buildIconLink(string $icon, string $href): array
+    {
+        return [
+            'title' => $icon,
+            'url' => $href,
+            'thumbnail' => null,
+            'type' => 'custom',
+            'button_id' => $this->socialIconButtonId(),
+            'custom_icon' => 'fa-brands fa-' . ltrim($icon, 'fa-'),
+        ];
+    }
+
+    protected function prepareLinkFromArray(array $link): ?array
     {
         $title = $this->stripBranding($link['title'] ?? $link['name'] ?? null);
         $url = $link['url'] ?? $link['link'] ?? null;
@@ -287,21 +326,20 @@ class LinktreeImportController extends Controller
 
         $socialIcon = $this->mapSocialIcon($url);
 
+        if ($socialIcon) {
+            return $this->buildIconLink($socialIcon, $url);
+        }
+
         return [
-             'title' => $title,
+            'title' => $title,
             'url' => $url,
             'thumbnail' => $link['thumbnail'] ?? ($link['imageUrl'] ?? ($link['cover'] ?? null)),
-            'type' => $socialIcon ? 'custom' : 'link',
+            'type' => 'link',
             'button_id' => null,
-            'custom_icon' => $socialIcon,
+            'custom_icon' => null,
         ];
     }
-	
-	
-	
-	
-	
-	
+
     protected function downloadAsset(?string $url, int $userId, string $prefix): ?string
     {
         if (! $url || ! filter_var($url, FILTER_VALIDATE_URL)) {
@@ -337,25 +375,22 @@ class LinktreeImportController extends Controller
             $data = UserData::getData($userId, 'linktree_import');
         }
 
-		
-		if (is_string($data) && $data !== 'null') {
+        if (is_string($data) && $data !== 'null') {
             $decoded = json_decode($data, true);
             if (json_last_error() === JSON_ERROR_NONE) {
                 $data = $decoded;
             }
         }
-		
-		
+
         if (empty($data) || $data === 'null') {
             return null;
         }
 
-		
-		  if (is_object($data)) {
+        if (is_object($data)) {
             $data = json_decode(json_encode($data), true);
         }
-		
-	  if (isset($data['links']) && is_string($data['links'])) {
+
+        if (isset($data['links']) && is_string($data['links'])) {
             $linksDecoded = json_decode($data['links'], true);
             if (json_last_error() === JSON_ERROR_NONE) {
                 $data['links'] = $linksDecoded;
@@ -373,8 +408,101 @@ class LinktreeImportController extends Controller
             }
         }
 
-		
+        if (is_array($data) && ! empty($data)) {
+            $needsRebuild = empty($data['links']) || empty($data['import_batch_id']);
+
+            if (! $needsRebuild) {
+                return $data;
+            }
+        }
+
+        $rebuilt = $this->reconstructLastImportFromLinks($userId);
+
+        if ($rebuilt) {
+            $merged = is_array($data) ? array_merge($rebuilt, array_filter($data)) : $rebuilt;
+            $this->rememberLastImport($userId, $merged);
+
+            return $merged;
+        }
+
         return is_array($data) ? $data : null;
+    }
+
+    protected function reconstructLastImportFromLinks(int $userId): ?array
+    {
+        $linksQuery = DB::table('links')
+            ->where('user_id', $userId)
+            ->orderByDesc('created_at');
+
+        if ($this->linksTableHasColumn('import_batch_id')) {
+            $linksQuery->whereNotNull('import_batch_id');
+        } else {
+            $linksQuery->whereNotNull('type_params')->where('type_params', 'like', '%"import_batch_id"%');
+        }
+
+        $select = ['id', 'title', 'link', 'type_params', 'custom_icon', 'created_at'];
+
+        if ($this->linksTableHasColumn('import_batch_id')) {
+            $select[] = 'import_batch_id';
+        }
+
+        if ($this->linksTableHasColumn('import_source')) {
+            $select[] = 'import_source';
+        }
+
+        $links = $linksQuery->get($select);
+
+        if ($links->isEmpty()) {
+            return null;
+        }
+
+        $batches = [];
+
+        foreach ($links as $link) {
+            $params = json_decode($link->type_params ?? '', true) ?: [];
+            $batchId = $link->import_batch_id ?? ($params['import_batch_id'] ?? null);
+            $source = $link->import_source ?? ($params['import_source'] ?? null);
+
+            if (! $batchId) {
+                continue;
+            }
+
+            if (! isset($batches[$batchId])) {
+                $batches[$batchId] = [
+                    'links' => [],
+                    'import_batch_id' => $batchId,
+                    'import_source' => $source,
+                    'imported_at' => $link->created_at ? (string) $link->created_at : now()->toDateTimeString(),
+                ];
+            }
+
+            $batches[$batchId]['links'][] = [
+                'id' => $link->id,
+                'title' => $link->title,
+                'url' => $link->link,
+                'thumbnail_path' => $params['thumbnail_path'] ?? null,
+                'custom_icon' => $link->custom_icon,
+            ];
+        }
+
+        if (empty($batches)) {
+            return null;
+        }
+
+        $latest = reset($batches);
+        $avatarPath = UserData::getData($userId, 'avatar_path');
+
+        return [
+            'source_url' => $latest['import_source'] ?? null,
+            'display_name' => null,
+            'bio' => null,
+            'seo_description' => null,
+            'headings' => [],
+            'avatar_path' => is_string($avatarPath) ? $avatarPath : null,
+            'links' => $latest['links'],
+            'import_batch_id' => $latest['import_batch_id'],
+            'imported_at' => $latest['imported_at'],
+        ];
     }
 
     protected function updateUserProfile(int $userId, array $profile, ?string $avatarPath): void
@@ -385,12 +513,10 @@ class LinktreeImportController extends Controller
             $updates['name'] = $profile['display_name'];
         }
 
- 
-		
-		
-		 if (! empty($profile['seo_description'])) {
+        $updates['littlelink_description'] = null;
+
+        if (! empty($profile['seo_description'])) {
             $updates['seo_desc'] = $profile['seo_description'];
-			  $updates['littlelink_description'] = null;
         }
 
         if (! empty($profile['headings'])) {
@@ -406,7 +532,7 @@ class LinktreeImportController extends Controller
         }
     }
 
-    protected function persistLinks(int $userId, array $links): array
+    protected function persistLinks(int $userId, array $links, ?string $importBatchId = null, ?string $sourceUrl = null): array
     {
         $buttonId = Button::where('name', 'custom')->value('id') ?? Button::min('id');
         if (! $buttonId) {
@@ -419,7 +545,18 @@ class LinktreeImportController extends Controller
 
         foreach ($links as $index => $linkData) {
             $thumbnailPath = $this->downloadAsset($linkData['thumbnail'] ?? null, $userId, 'thumb_' . ($index + 1));
- $linkButtonId = $this->determineButtonId($linkData, $buttonId);
+
+            $typeParams = [];
+
+            if ($importBatchId) {
+                $typeParams['import_batch_id'] = $importBatchId;
+            }
+
+            if ($sourceUrl) {
+                $typeParams['import_source'] = $sourceUrl;
+            }
+
+            $linkButtonId = $this->determineButtonId($linkData, $buttonId);
 
             $link = new Link();
             $link->link = $linkData['url'];
@@ -427,13 +564,25 @@ class LinktreeImportController extends Controller
             $link->button_id = $linkButtonId;
             $link->user_id = $userId;
             $link->up_link = 'yes';
-$link->type = $linkData['type'] ?? null;
+            $link->type = $linkData['type'] ?? null;
+
+            if ($importBatchId && $this->linksTableHasColumn('import_batch_id')) {
+                $link->import_batch_id = $importBatchId;
+            }
+
+            if ($sourceUrl && $this->linksTableHasColumn('import_source')) {
+                $link->import_source = $sourceUrl;
+            }
             if (! empty($linkData['custom_icon'])) {
                 $link->custom_icon = $linkData['custom_icon'];
             }
 
             if ($thumbnailPath) {
-                $link->type_params = json_encode(['thumbnail_path' => $thumbnailPath]);
+                $typeParams['thumbnail_path'] = $thumbnailPath;
+            }
+
+            if ($typeParams) {
+                $link->type_params = json_encode($typeParams);
             }
 
             $link->order = $nextOrder++;
@@ -451,8 +600,7 @@ $link->type = $linkData['type'] ?? null;
         return $imported;
     }
 
-	
-	protected function determineButtonId(array $linkData, int $defaultButtonId): int
+    protected function determineButtonId(array $linkData, int $defaultButtonId): int
     {
         if (! empty($linkData['button_id'])) {
             return $linkData['button_id'];
@@ -461,30 +609,35 @@ $link->type = $linkData['type'] ?? null;
         return $defaultButtonId;
     }
 
-    protected function socialButtonId(): int
-    {
-        return Button::where('name', 'icons')->value('id')
-            ?? Button::where('name', 'icon')->value('id')
-            ?? 94;
-    }
-
     protected function mapSocialIcon(string $url): ?string
     {
         $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
 
         $map = [
-            'instagram.com' => 'fa-instagram',
-            'tiktok.com' => 'fa-tiktok',
-            'spotify.com' => 'fa-spotify',
-            'youtube.com' => 'fa-youtube',
-            'youtu.be' => 'fa-youtube',
-            'twitter.com' => 'fa-twitter',
-            'x.com' => 'fa-twitter',
-            'facebook.com' => 'fa-facebook',
+            'instagram.com' => 'instagram',
+            'tiktok.com' => 'tiktok',
+            'spotify.com' => 'spotify',
+            'youtube.com' => 'youtube',
+            'youtu.be' => 'youtube',
+            'twitter.com' => 'twitter',
+            'x.com' => 'twitter',
+            'facebook.com' => 'facebook-f',
+            'wa.me' => 'whatsapp',
+            'whatsapp.com' => 'whatsapp',
+            't.me' => 'telegram',
+            'telegram.me' => 'telegram',
+            'mercadolivre.com.br' => 'store',
+            'mercadolibre.com' => 'store',
+            'shopee.com' => 'bag-shopping',
+            'amazon.' => 'amazon',
+            'threads.net' => 'threads',
+            'onlyfans.com' => 'star',
+            'patreon.com' => 'patreon',
+            'privacy.com' => 'user-lock',
         ];
 
         foreach ($map as $domain => $icon) {
-            if (str_contains($host, $domain)) {
+            if (strpos($host, $domain) !== false) {
                 return $icon;
             }
         }
@@ -492,8 +645,74 @@ $link->type = $linkData['type'] ?? null;
         return null;
     }
 
-	
-	
+    protected function deduplicateSocialIcons(array $links): array
+    {
+        $seenIcons = [];
+        $unique = [];
+
+        foreach ($links as $link) {
+            $isSocialIcon = ($link['button_id'] ?? null) === $this->socialIconButtonId() || (! empty($link['custom_icon']) && strpos($link['custom_icon'], 'fa-') === 0);
+
+            if ($isSocialIcon) {
+                $iconKey = $link['custom_icon'] ?? ($link['title'] ?? '');
+
+                if (! empty($link['custom_icon'])) {
+                    $classes = preg_split('/\s+/', trim($link['custom_icon']));
+
+                    foreach (array_reverse($classes) as $class) {
+                        if (strpos($class, 'fa-') === 0) {
+                            $iconKey = substr($class, 3);
+                            break;
+                        }
+                    }
+                }
+
+                $iconKey = strtolower($iconKey);
+
+                if (isset($seenIcons[$iconKey])) {
+                    continue;
+                }
+
+                $seenIcons[$iconKey] = true;
+                $link['title'] = $iconKey;
+            }
+
+            $unique[] = $link;
+        }
+
+        return $unique;
+    }
+
+    protected function socialIconButtonId(): ?int
+    {
+        static $socialButtonId = null;
+
+        if ($socialButtonId !== null) {
+            return $socialButtonId;
+        }
+
+        $socialButtonId = Button::find(94)->id ?? null;
+
+        if (! $socialButtonId) {
+            $socialButtonId = Button::where('name', 'like', '%icon%')->value('id');
+        }
+
+        return $socialButtonId;
+    }
+
+    protected function linksTableHasColumn(string $column): bool
+    {
+        static $columns = [];
+
+        if (array_key_exists($column, $columns)) {
+            return $columns[$column];
+        }
+
+        $columns[$column] = Schema::hasColumn((new Link())->getTable(), $column);
+
+        return $columns[$column];
+    }
+
     protected function rememberLastImport(int $userId, array $payload): void
     {
         UserData::saveData($userId, 'profile_import', $payload);
@@ -547,7 +766,7 @@ $link->type = $linkData['type'] ?? null;
         foreach ($profilePictureContainer->getElementsByTagName('img') as $img) {
             $classes = $img->getAttribute('class');
 
-            if (str_contains($classes, 'rounded-full') && str_contains($classes, 'object-contain')) {
+            if (strpos($classes, 'rounded-full') !== false && strpos($classes, 'object-contain') !== false) {
                 $src = $img->getAttribute('src');
 
                 if ($src && filter_var($src, FILTER_VALIDATE_URL)) {
@@ -559,28 +778,27 @@ $link->type = $linkData['type'] ?? null;
         return null;
     }
 
-	
-	protected function stripBranding(?string $value): ?string
+    protected function stripBranding(?string $value): ?string
     {
         if (! $value) {
             return $value;
         }
 
-         $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-$normalized = mb_convert_encoding($decoded, 'UTF-8', 'UTF-8, ISO-8859-1');
+        $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $normalized = mb_convert_encoding($decoded, 'UTF-8', 'UTF-8, ISO-8859-1');
 
         return trim(str_ireplace('linktree', '', $normalized));
     }
-	
+
     protected function shouldSkipLink(?string $title, ?string $url): bool
     {
         $title = strtolower($title ?? '');
         $url = strtolower($url ?? '');
 
-        $blockedWords = ['report', 'privacy','linktree', 'hopp', 'biolink', 'bio.link'];
+        $blockedWords = ['report', 'privacy', 'linktree'];
 
         foreach ($blockedWords as $word) {
-            if (str_contains($title, $word) || ($url && str_contains($url, $word))) {
+            if (strpos($title, $word) !== false || ($url && strpos($url, $word) !== false)) {
                 return true;
             }
         }
@@ -591,16 +809,33 @@ $normalized = mb_convert_encoding($decoded, 'UTF-8', 'UTF-8, ISO-8859-1');
     protected function removeImportedLinks(array $importData, int $userId): void
     {
         $links = $importData['links'] ?? [];
+        $batchId = $importData['import_batch_id'] ?? null;
+
+        if ($batchId && $this->linksTableHasColumn('import_batch_id')) {
+            Link::where('user_id', $userId)->where('import_batch_id', $batchId)->delete();
+
+            return;
+        }
+
+        if ($batchId) {
+            Link::where('user_id', $userId)
+                ->whereNotNull('type_params')
+                ->where('type_params', 'like', '%"import_batch_id":"' . $batchId . '"%')
+                ->delete();
+
+            return;
+        }
+
+        $ids = [];
 
         foreach ($links as $link) {
             if (! empty($link['id'])) {
-                Link::where('id', $link['id'])->where('user_id', $userId)->delete();
-                continue;
+                $ids[] = $link['id'];
             }
+        }
 
-            if (! empty($link['url'])) {
-                Link::where('user_id', $userId)->where('link', $link['url'])->delete();
-            }
+        if (! empty($ids)) {
+            Link::where('user_id', $userId)->whereIn('id', $ids)->delete();
         }
     }
 

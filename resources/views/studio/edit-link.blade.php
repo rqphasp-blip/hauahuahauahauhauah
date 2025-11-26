@@ -43,7 +43,11 @@
                                 </div>
                     
                                 <div id='link_params' class='col-lg-8'></div>
-                    
+                      <div class="col-lg-8 mt-3">
+                                    <label for="expires_at" class="form-label">Data de expiração</label>
+                                    <input type="datetime-local" name="expires_at" id="expires_at" class="form-control" value="{{ optional(optional($LinkData)->expires_at)->format('Y-m-d\\TH:i') }}">
+                                    <span class="small text-muted">Deixe em branco para manter o link sempre ativo.</span>
+                                </div>
                                 <div class="d-flex align-items-center pt-4">
                                     <a class="btn btn-danger me-3" href="{{ url('studio/links') }}">{{__('messages.Cancel')}}</a>
                                     <button type="submit" class="btn btn-primary me-3">{{__('messages.Save')}}</button>

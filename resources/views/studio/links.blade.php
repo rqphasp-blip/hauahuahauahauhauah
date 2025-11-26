@@ -22,6 +22,21 @@ if (isset($_COOKIE['LinkCount'])) {
     cursor: -webkit-grabbing;
     fill: currentColor;
 }
+	
+	
+
+.expired-link {
+    position: relative;
+    border: 1px dashed #f8d7da;
+    background-color: #fff8f8;
+    opacity: 0.9;
+}
+
+.expired-label {
+    color: #b02a37;
+    font-weight: 600;
+}	
+	
 </style>
 
 @push('sidebar-stylesheets')
@@ -75,8 +90,15 @@ if (isset($_COOKIE['LinkCount'])) {
                                               </div>
                                         @else
                                         @foreach($links as $link)
-                                        @php $button = Button::find($link->button_id); if(isset($button->name)){$buttonName = $button->name;}else{$buttonName = 0;} @endphp
-                                        @php if($buttonName == "default email"){$buttonName = "email";} if($buttonName == "default email_alt"){$buttonName = "email_alt";} @endphp
+                                         
+										 @php $button = Button::find($link->button_id); if(isset($button->name)){$buttonName = $button->name;}else{$buttonName = 0;} @endphp
+                                        
+										
+										 @php if($buttonName == "default email"){$buttonName = "email";} if($buttonName == "default email_alt"){$buttonName = "email_alt";} @endphp
+										
+										 @php $expiration = $link->expires_at ? \Carbon\Carbon::parse($link->expires_at) : null; $isExpired = $expiration?->isPast(); @endphp
+										
+										
                                         @if($button && $button->name !== 'icon')
                                         <div class='row h-100 pb-0 mb-2 border rounded hvr-glow w-100' data-id="{{$link->id}}">
                                             <div class="d-flex ">
@@ -91,9 +113,9 @@ if (isset($_COOKIE['LinkCount'])) {
                                             <div class='col h-100'>
                             
                                                 <div class='row h-100'>
-                                                    <div class='col-12 p-2' style="max-width:300px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ $link->title }}">
-                                                        <span class='h6'>
-                                                            @if($button->name == "custom_website")
+                                                   <div class='col-12 p-2' style="max-width:300px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ $link->title }}">
+                                                          <span class='h6'>
+                                                              @if($button->name == "custom_website")
                                                             <span class="bg-soft-secondary" style="border: 1px solid #d0d4d7 !important;border-radius:5px;width:25px!important;height:25px!important;"><img style="margin-bottom:3px;margin-left:4px;margin-right:4px;max-width:15px;max-height:15px;" alt="button-icon" class="icon hvr-icon" src="@if(file_exists(base_path("assets/favicon/icons/").localIcon($link->id))){{url('assets/favicon/icons/'.localIcon($link->id))}}@else{{getFavIcon($link->id)}}@endif" onerror="this.onerror=null; this.src='{{asset('assets/linkstack/icons/website.svg')}}';"></span>
                                                             @elseif($button->name == "space")
                                                             <span class="bg-soft-secondary" style="border: 1px solid #d0d4d7 !important;border-radius:5px;width:25px!important;height:25px!important;"><i style="margin-left:2.83px;margin-right:-1px;color:#fff;" class='bi bi-distribute-vertical'>&nbsp;</i></span>
@@ -118,8 +140,16 @@ if (isset($_COOKIE['LinkCount'])) {
                             
                                                         @endif
                             
-                                                    </div>
-                            
+                                               </div>
+
+                                                      @if($expiration)
+                                                      <div class='col-12 px-2 small text-muted'>
+                                                          <span class="{{ $isExpired ? 'expired-label' : '' }}">Expira em: {{ $expiration->format('d/m/Y H:i') }}</span>
+                                                          @if($isExpired)
+                                                              <span class="badge bg-soft-danger text-danger ms-2">Desativado</span>
+                                                          @endif
+                                                      </div>
+                                                      @endif
                                                     <div class='col' class="text-right">
                                                         {{Str::limit($link->params['text'] ?? null, 150)  }}
                             

@@ -84,7 +84,7 @@ class UserController extends Controller
     }
 
     //Show littlelink page. example => http://127.0.0.1:8000/+admin
-    public function littlelink(request $request)
+    public function littlelink(Request $request)
     {
         if(isset($request->useif)){
             $littlelink_name = User::select('littlelink_name')->where('id', $request->littlelink)->value('littlelink_name');
@@ -109,6 +109,9 @@ class UserController extends Controller
         ->join('buttons', 'buttons.id', '=', 'links.button_id')
         ->select('links.*', 'buttons.name') // Assuming 'links.*' to fetch all columns including 'type_params'
         ->where('user_id', $id)
+		->where(function($query) {
+            $query->whereNull('links.expires_at')->orWhere('links.expires_at', '>', Carbon::now());
+        })			
         ->orderBy('up_link', 'asc')
         ->orderBy('order', 'asc')
         ->get();
@@ -142,7 +145,7 @@ class UserController extends Controller
     }
 
     //Show littlelink page as home page if set in config
-    public function littlelinkhome(request $request)
+    public function littlelinkhome(Request $request)
     {
         $littlelink_name = env('HOME_URL');
         $id = User::select('id')->where('littlelink_name', $littlelink_name)->value('id');
@@ -158,6 +161,8 @@ class UserController extends Controller
         ->join('buttons', 'buttons.id', '=', 'links.button_id')
         ->select('links.*', 'buttons.name') // Assuming 'links.*' to fetch all columns including 'type_params'
         ->where('user_id', $id)
+		->orderBy('up_link', 'asc')
+        ->orderBy('order', 'asc')			
         ->orderBy('up_link', 'asc')
         ->orderBy('order', 'asc')
         ->get();
@@ -180,7 +185,7 @@ class UserController extends Controller
     }
 
     //Redirect to user page
-    public function userRedirect(request $request)
+    public function userRedirect(Request $request)
     {
         $id = $request->id;
         $user = User::select('littlelink_name')->where('id', $id)->value('littlelink_name');
@@ -218,9 +223,9 @@ class UserController extends Controller
     public function saveLink(Request $request)
     {
         // Step 1: Validate Request
-        // $request->validate([
-        //     'link' => 'sometimes|url',
-        // ]);
+        $request->validate([
+             'link' => 'sometimes|url',
+         ]);
     
         // Step 2: Determine Link Type and Title
         $linkType = LinkType::findByTypename($request->typename);
@@ -284,7 +289,7 @@ class UserController extends Controller
 
         // Step 6: Prepare Link Data
         // (Handled by the included file)
-
+		$linkData['expires_at'] = $request->filled('expires_at') ? Carbon::parse($request->input('expires_at')) : null;
         // Step 7: Save or Update Link
         $OrigLink = Link::find($request->linkid);
         $linkColumns = Schema::getColumnListing('links'); // Get all column names of links table
@@ -371,37 +376,32 @@ class UserController extends Controller
 
 
     //Count the number of clicks and redirect to link
-    public function clickNumber(request $request)
+    public function clickNumber(Request $request)
     {
         $linkId = $request->id;
 
-        if (substr($linkId, -1) == '+') {
-            $linkWithoutPlus = str_replace('+', '', $linkId);
+         if (substr($linkId, -1) === '+') {
+            $linkWithoutPlus = substr($linkId, 0, -1);
             return redirect(url('info/'.$linkWithoutPlus));
         }
-    
-        $link = Link::find($linkId);
-
-        if (empty($link)) {
-            return abort(404);
-        }
-
-        $link = $link->link;
 
         if (empty($linkId)) {
             return abort(404);
         }
 
+        $link = Link::find($linkId);
+
+        if (!$link || ($link->expires_at && $link->expires_at->isPast())) {
+            return abort(404);
+        }
+
         Link::where('id', $linkId)->increment('click_number', 1);
 
-        $response = redirect()->away($link);
-        $response->header('X-Robots-Tag', 'noindex, nofollow');
-
-        return $response;
+        return redirect()->away($link->link)->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     //Download Vcard
-    public function vcard(request $request)
+    public function vcard(Request $request)
     {
         $linkId = $request->id;
 
@@ -460,7 +460,7 @@ class UserController extends Controller
     }
 
     //Delete link
-    public function deleteLink(request $request)
+    public function deleteLink(Request $request)
     {
         $linkId = $request->id;
 
@@ -479,7 +479,7 @@ class UserController extends Controller
     }
 
     //Delete icon
-    public function clearIcon(request $request)
+    public function clearIcon(Request $request)
     {
         $linkId = $request->id;
 
@@ -496,7 +496,7 @@ class UserController extends Controller
     }
 
     //Raise link on the littlelink page
-    public function upLink(request $request)
+    public function upLink(Request $request)
     {
         $linkId = $request->id;
         $upLink = $request->up;
@@ -513,7 +513,7 @@ class UserController extends Controller
     }
 
     //Show link to edit
-    public function showLink(request $request)
+    public function showLink(Request $request)
     {
         $linkId = $request->id;
 
@@ -530,7 +530,7 @@ class UserController extends Controller
     }
 
     //Show custom CSS + custom icon
-    public function showCSS(request $request)
+    public function showCSS(Request $request)
     {
         $linkId = $request->id;
 
@@ -547,7 +547,7 @@ class UserController extends Controller
     }
 
     //Save edit link
-    public function editLink(request $request)
+    public function editLink(Request $request)
     {
         $request->validate([
             'link' => 'required|exturl',
@@ -576,7 +576,7 @@ class UserController extends Controller
     }
 
     //Save edit custom CSS + custom icon
-    public function editCSS(request $request)
+    public function editCSS(Request $request)
     {
         $linkId = $request->id;
         $custom_icon = $request->custom_icon;
@@ -593,7 +593,7 @@ class UserController extends Controller
     }
 
     //Show littlelinke page for edit
-    public function showPage(request $request)
+    public function showPage(Request $request)
     {
         $userId = Auth::user()->id;
 
@@ -804,7 +804,7 @@ UserData::saveData($userId, 'checkmark', $checkmark);
 
 
     //Show custom theme
-    public function showTheme(request $request)
+    public function showTheme(Request $request)
     {
         $userId = Auth::user()->id;
 
@@ -814,7 +814,7 @@ UserData::saveData($userId, 'checkmark', $checkmark);
     }
 
     //Save custom theme
-    public function editTheme(request $request)
+    public function editTheme(Request $request)
     {
         $request->validate([
             'zip' => 'sometimes|mimes:zip',
@@ -863,7 +863,7 @@ UserData::saveData($userId, 'checkmark', $checkmark);
     }
 
     //Show user (name, email, password)
-    public function showProfile(request $request)
+    public function showProfile(Request $request)
     {
         $userId = Auth::user()->id;
 
@@ -873,7 +873,7 @@ UserData::saveData($userId, 'checkmark', $checkmark);
     }
 
     //Save user (name, email, password)
-    public function editProfile(request $request)
+    public function editProfile(Request $request)
     {
         $request->validate([
             'name' => 'sometimes|required|unique:users',
@@ -899,7 +899,7 @@ UserData::saveData($userId, 'checkmark', $checkmark);
     }
 
     //Show user theme credit page
-    public function theme(request $request)
+    public function theme(Request $request)
     {
         $littlelink_name = $request->littlelink;
         $id = User::select('id')->where('littlelink_name', $littlelink_name)->value('id');
@@ -917,7 +917,7 @@ UserData::saveData($userId, 'checkmark', $checkmark);
     }
 
     //Delete existing user
-    public function deleteUser(request $request)
+    public function deleteUser(Request $request)
     {
 
         // echo $request->id;
@@ -954,7 +954,7 @@ UserData::saveData($userId, 'checkmark', $checkmark);
     }
 
     //Export user links
-    public function exportLinks(request $request)
+    public function exportLinks(Request $request)
     {
         $userId = Auth::id();
         $user = User::find($userId);

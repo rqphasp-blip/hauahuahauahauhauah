@@ -1,6 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
+@once
+    <script src="https://kit.fontawesome.com/89540f80d1.js" crossorigin="anonymous"></script>
+@endonce
 <div class="container py-4">
       @php
         $hasImport = !empty($latestImport);
