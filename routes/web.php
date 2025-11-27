@@ -45,6 +45,8 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::delete('/leads01/{id}', [Leads01Controller::class, 'destroy'])->name('leads01.destroy');
     Route::get('/leads01/{id}/leads', [Leads01Controller::class, 'leads'])->name('leads01.leads');
     Route::get('/leads01/{id}/leads/{entryId}', [Leads01Controller::class, 'showLead'])->name('leads01.leads.show');
+	  Route::post('/leads01/{id}/toggle-visible', [Leads01Controller::class, 'toggleVisible'])
+        ->name('leads01.campaign.toggle-visible');
 });
 
 Route::middleware(['web'])->group(function () {

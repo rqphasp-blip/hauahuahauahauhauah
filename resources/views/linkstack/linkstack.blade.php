@@ -12,11 +12,16 @@
         @endforeach
 
         @php
+            // Normaliza flags para facilitar o uso no Blade
             $hasCatalog = $catalogEnabled ?? false;
-            $hasLeads   = isset($leadCampaign) && $leadCampaign;
+            // Se tiver variável $leadsEnabled vinda do controller, respeita.
+            // Caso contrário, considera que existe leads se $leadCampaign não estiver vazio.
+            $hasLeads   = isset($leadsEnabled)
+                ? ($leadsEnabled && !empty($leadCampaign))
+                : (!empty($leadCampaign));
         @endphp
 
-        @if($hasCatalog)
+        @if($hasCatalog || $hasLeads)
             <style>
                 .ls-tab-card {
                     background: transparent;
@@ -100,116 +105,170 @@
             @include('linkstack.elements.heading')
             @include('linkstack.elements.bio')
         @endforeach
+
         @include('linkstack.elements.icons')
 
         @php
             $hasCatalog = $catalogEnabled ?? false;
-            $hasLeads   = isset($leadCampaign) && $leadCampaign;
-
-            // tab vindo do controller: links | catalog | leads
-            $requestedTab = $activeTab ?? 'links';
-
-            // decide qual aba fica ativa de fato
-            if ($requestedTab === 'catalog' && !$hasCatalog) {
-                $requestedTab = 'links';
-            }
-            if ($requestedTab === 'leads' && !$hasLeads) {
-                $requestedTab = 'links';
-            }
-
-            $activePaneId = match ($requestedTab) {
-                'catalog' => 'ls-tab-catalog',
-                'leads'   => 'ls-tab-leads',
-                default   => 'ls-tab-profile',
-            };
-
-            $leadFormEmbedUrl = null;
-            if ($hasLeads) {
-                // supõe rota pública leads01.form(slug)
-                $leadFormEmbedUrl = route('leads01.form', $leadCampaign->slug) . '?embed=1';
-            }
+            $hasLeads   = isset($leadsEnabled)
+                ? ($leadsEnabled && !empty($leadCampaign))
+                : (!empty($leadCampaign));
         @endphp
 
         @if($hasCatalog || $hasLeads)
-            <div class="ls-tab-card {{ $activePaneId === 'ls-tab-catalog' ? 'ls-tab-card--catalog' : '' }}">
+            <div class="ls-tab-card">
                 <div class="ls-tab-buttons" role="tablist">
-                    {{-- Aba Perfil / Links --}}
+                    {{-- Aba Perfil (sempre) --}}
                     <button
-                        class="ls-tab-button {{ $activePaneId === 'ls-tab-profile' ? 'active' : '' }}"
+                        class="ls-tab-button active"
                         type="button"
                         data-ls-tab-target="ls-tab-profile"
-                        aria-selected="{{ $activePaneId === 'ls-tab-profile' ? 'true' : 'false' }}"
-                    >
-                        Links
+                        aria-selected="true">
+                        Perfil
                     </button>
 
                     {{-- Aba Catálogo (se habilitado) --}}
                     @if($hasCatalog)
                         <button
-                            class="ls-tab-button {{ $activePaneId === 'ls-tab-catalog' ? 'active' : '' }}"
+                            class="ls-tab-button"
                             type="button"
                             data-ls-tab-target="ls-tab-catalog"
                             data-catalog-url="{{ $catalogEmbedUrl }}"
-                            aria-selected="{{ $activePaneId === 'ls-tab-catalog' ? 'true' : 'false' }}"
-                        >
+                            aria-selected="false">
                             Catálogo
                         </button>
                     @endif
 
-                    {{-- Aba Leads (se houver campanha ativa) --}}
-                    @if($hasLeads && $leadFormEmbedUrl)
+                    {{-- Aba Formulário (se houver campanha válida) --}}
+                    @if($hasLeads)
                         <button
-                            class="ls-tab-button {{ $activePaneId === 'ls-tab-leads' ? 'active' : '' }}"
+                            class="ls-tab-button"
                             type="button"
                             data-ls-tab-target="ls-tab-leads"
-                            data-leads-url="{{ $leadFormEmbedUrl }}"
-                            aria-selected="{{ $activePaneId === 'ls-tab-leads' ? 'true' : 'false' }}"
-                        >
-                            Lead Form
+                            aria-selected="false">
+                            {{ $leadCampaign->name ?? 'Formulário' }}
                         </button>
                     @endif
                 </div>
 
                 <div class="mt-3">
-                    {{-- PANE PERFIL/LINKS --}}
-                    <div
-                        id="ls-tab-profile"
-                        class="ls-tab-pane {{ $activePaneId === 'ls-tab-profile' ? 'active' : '' }}"
-                    >
+                    {{-- CONTEÚDO: PERFIL --}}
+                    <div id="ls-tab-profile" class="ls-tab-pane active">
                         @include('linkstack.elements.buttons')
                         @yield('content')
                         @include('linkstack.modules.footer')
                     </div>
 
-                    {{-- PANE CATÁLOGO --}}
+                    {{-- CONTEÚDO: CATÁLOGO (lazy load via fetch) --}}
                     @if($hasCatalog)
-                        <div
-                            id="ls-tab-catalog"
-                            class="ls-tab-pane {{ $activePaneId === 'ls-tab-catalog' ? 'active' : '' }}"
-                            data-loaded="{{ $activePaneId === 'ls-tab-catalog' ? 'true' : 'false' }}"
-                        >
+                        <div id="ls-tab-catalog" class="ls-tab-pane" data-loaded="false">
                             <div class="text-center text-muted py-4" id="ls-catalog-placeholder">
-                                @if($activePaneId === 'ls-tab-catalog')
-                                    Carregando catálogo...
-                                @else
-                                    Clique em "Catálogo" para carregar os produtos.
-                                @endif
+                                Clique na aba Catálogo para carregar os produtos.
                             </div>
                         </div>
                     @endif
 
-                    {{-- PANE LEADS --}}
-                    @if($hasLeads && $leadFormEmbedUrl)
-                        <div
-                            id="ls-tab-leads"
-                            class="ls-tab-pane {{ $activePaneId === 'ls-tab-leads' ? 'active' : '' }}"
-                            data-loaded="{{ $activePaneId === 'ls-tab-leads' ? 'true' : 'false' }}"
-                        >
-                            <div class="text-center text-muted py-4" id="ls-leads-placeholder">
-                                @if($activePaneId === 'ls-tab-leads')
-                                    Carregando formulário...
-                                @else
-                                    Clique em "Lead Form" para carregar o formulário.
+                    {{-- CONTEÚDO: LEADS --}}
+                    @if($hasLeads)
+                        <div id="ls-tab-leads" class="ls-tab-pane">
+                            <div class="py-3">
+                                <h2 class="h5 mb-3">{{ $leadCampaign->name }}</h2>
+
+                                @if($leadCampaign->description)
+                                    <p class="text-muted">{{ $leadCampaign->description }}</p>
+                                @endif
+
+                                @if(session('success'))
+                                    <div class="alert alert-success">
+                                        {{ session('success') }}
+                                    </div>
+                                @endif
+
+                                @if($errors->any())
+                                    <div class="alert alert-danger">
+                                        <ul class="mb-0">
+                                            @foreach($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
+
+                                {{-- IMPORTANTE: usa rota nomeada do plugin --}}
+                                <form method="POST"
+                                      action="{{ route('leads01.submit', $leadCampaign->slug) }}">
+                                    @csrf
+
+                                    @foreach($leadCampaign->fields as $field)
+                                        @php
+                                            $fieldId   = 'field_'.$field->id;
+                                            $label     = $field->label ?? $field->name;
+                                            $required  = (bool) ($field->required ?? false);
+                                            $type      = $field->type ?? 'text';
+                                            $oldValue  = old($fieldId);
+
+                                            $optionsRaw = $field->options ?? [];
+                                            if (is_string($optionsRaw)) {
+                                                $options = json_decode($optionsRaw, true) ?? [];
+                                            } elseif (is_array($optionsRaw)) {
+                                                $options = $optionsRaw;
+                                            } else {
+                                                $options = [];
+                                            }
+                                        @endphp
+
+                                        <div class="mb-3">
+                                            <label for="{{ $fieldId }}" class="form-label">
+                                                {{ $label }} @if($required) * @endif
+                                            </label>
+
+                                            @if($type === 'textarea')
+                                                <textarea
+                                                    id="{{ $fieldId }}"
+                                                    name="{{ $fieldId }}"
+                                                    class="form-control"
+                                                    rows="3"
+                                                    @if($required) required @endif>{{ $oldValue }}</textarea>
+                                            @elseif($type === 'select')
+                                                <select
+                                                    id="{{ $fieldId }}"
+                                                    name="{{ $fieldId }}"
+                                                    class="form-select"
+                                                    @if($required) required @endif>
+                                                    <option value="">Selecione...</option>
+                                                    @foreach($options as $opt)
+                                                        <option value="{{ $opt }}" @if($oldValue === $opt) selected @endif>
+                                                            {{ $opt }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            @else
+                                                @php
+                                                    $htmlType = in_array($type, ['email', 'tel', 'number', 'text'], true)
+                                                        ? $type
+                                                        : 'text';
+                                                @endphp
+                                                <input
+                                                    type="{{ $htmlType }}"
+                                                    id="{{ $fieldId }}"
+                                                    name="{{ $fieldId }}"
+                                                    class="form-control"
+                                                    value="{{ $oldValue }}"
+                                                    @if($required) required @endif>
+                                            @endif
+                                        </div>
+                                    @endforeach
+
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        Enviar
+                                    </button>
+                                </form>
+
+                                @if($leadCampaign->thank_you_message)
+                                    <p class="text-muted small mt-2">
+                                        Após o envio, o usuário verá a mensagem:
+                                        “{{ $leadCampaign->thank_you_message }}”
+                                    </p>
                                 @endif
                             </div>
                         </div>
@@ -217,7 +276,7 @@
                 </div>
             </div>
         @else
-            {{-- Sem catálogo e sem leads: comportamento original --}}
+            {{-- Comportamento original: sem catálogo/sem leads, só os botões padrão --}}
             @include('linkstack.elements.buttons')
             @yield('content')
             @include('linkstack.modules.footer')
@@ -226,7 +285,9 @@
 
     @php
         $hasCatalog = $catalogEnabled ?? false;
-        $hasLeads   = isset($leadCampaign) && $leadCampaign;
+        $hasLeads   = isset($leadsEnabled)
+            ? ($leadsEnabled && !empty($leadCampaign))
+            : (!empty($leadCampaign));
     @endphp
 
     @if($hasCatalog || $hasLeads)
@@ -234,15 +295,16 @@
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
                     const buttons = document.querySelectorAll('[data-ls-tab-target]');
-                    const panes = {
-                        profile: document.getElementById('ls-tab-profile'),
-                        catalog: document.getElementById('ls-tab-catalog'),
-                        leads: document.getElementById('ls-tab-leads'),
-                    };
-                    const tabCard = document.querySelector('.ls-tab-card');
+                    const panes = {};
+                    ['ls-tab-profile', 'ls-tab-catalog', 'ls-tab-leads'].forEach(function (id) {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            panes[id] = el;
+                        }
+                    });
 
-                    let catalogLoaded = (panes.catalog && panes.catalog.dataset.loaded === 'true');
-                    let leadsLoaded   = (panes.leads   && panes.leads.dataset.loaded   === 'true');
+                    const tabCard = document.querySelector('.ls-tab-card');
+                    let catalogLoaded = false;
 
                     function updateTabCardBackground(targetId) {
                         if (!tabCard) return;
@@ -254,11 +316,11 @@
                     }
 
                     function setActive(targetId) {
-                        Object.values(panes).forEach(pane => {
-                            if (!pane) return;
+                        Object.values(panes).forEach(function (pane) {
                             pane.classList.remove('active');
                         });
-                        buttons.forEach(btn => {
+
+                        buttons.forEach(function (btn) {
                             btn.classList.remove('active');
                             btn.setAttribute('aria-selected', 'false');
                         });
@@ -268,7 +330,9 @@
 
                         targetPane.classList.add('active');
 
-                        const activeButton = Array.from(buttons).find(btn => btn.dataset.lsTabTarget === targetId);
+                        const activeButton = Array.from(buttons).find(function (btn) {
+                            return btn.dataset.lsTabTarget === targetId;
+                        });
                         if (activeButton) {
                             activeButton.classList.add('active');
                             activeButton.setAttribute('aria-selected', 'true');
@@ -278,7 +342,7 @@
                     }
 
                     async function loadCatalog(button) {
-                        if (!panes.catalog || catalogLoaded) return;
+                        if (catalogLoaded) return;
                         const url = button.dataset.catalogUrl;
                         const placeholder = document.getElementById('ls-catalog-placeholder');
                         if (!url || !placeholder) return;
@@ -290,7 +354,7 @@
                             const html = await response.text();
                             placeholder.innerHTML = html;
 
-                            placeholder.querySelectorAll('script').forEach((script) => {
+                            placeholder.querySelectorAll('script').forEach(function (script) {
                                 const clone = document.createElement('script');
                                 if (script.src) {
                                     clone.src = script.src;
@@ -301,62 +365,26 @@
                             });
 
                             catalogLoaded = true;
-                            panes.catalog.dataset.loaded = 'true';
+                            placeholder.dataset.loaded = 'true';
                         } catch (e) {
                             placeholder.textContent = 'Não foi possível carregar o catálogo.';
                         }
                     }
 
-                    async function loadLeads(button) {
-                        if (!panes.leads || leadsLoaded) return;
-                        const url = button.dataset.leadsUrl;
-                        const placeholder = document.getElementById('ls-leads-placeholder');
-                        if (!url || !placeholder) return;
-
-                        placeholder.textContent = 'Carregando formulário...';
-
-                        try {
-                            const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                            const html = await response.text();
-                            placeholder.innerHTML = html;
-
-                            placeholder.querySelectorAll('script').forEach((script) => {
-                                const clone = document.createElement('script');
-                                if (script.src) {
-                                    clone.src = script.src;
-                                } else {
-                                    clone.textContent = script.textContent;
-                                }
-                                document.body.appendChild(clone);
-                            });
-
-                            leadsLoaded = true;
-                            panes.leads.dataset.loaded = 'true';
-                        } catch (e) {
-                            placeholder.textContent = 'Não foi possível carregar o formulário.';
-                        }
-                    }
-
-                    buttons.forEach(button => {
-                        button.addEventListener('click', async () => {
+                    buttons.forEach(function (button) {
+                        button.addEventListener('click', async function () {
                             const targetId = button.dataset.lsTabTarget;
                             if (!targetId) return;
 
                             setActive(targetId);
 
-                            if (targetId === 'ls-tab-catalog') {
+                            if (targetId === 'ls-tab-catalog' && button.dataset.catalogUrl) {
                                 await loadCatalog(button);
-                            } else if (targetId === 'ls-tab-leads') {
-                                await loadLeads(button);
                             }
                         });
                     });
 
-                    // Garante que o estado visual do card reflita a aba inicial
-                    const initiallyActive = document.querySelector('.ls-tab-pane.active');
-                    if (initiallyActive) {
-                        updateTabCardBackground(initiallyActive.id);
-                    }
+                    updateTabCardBackground('ls-tab-profile');
                 });
             </script>
         @endpush

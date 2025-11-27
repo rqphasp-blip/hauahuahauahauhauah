@@ -16,8 +16,15 @@ class LeadCampaign extends Model
         'description',
         'thank_you_message',
         'status',
+		'visivel',
     ];
 
+	
+	
+	protected $casts = [
+        'visivel' => 'integer', // ou 'boolean' se preferir
+    ];
+	
     public function user()
     {
         return $this->belongsTo(User::class);

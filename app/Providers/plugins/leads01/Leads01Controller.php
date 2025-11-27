@@ -30,10 +30,41 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class Leads01Controller extends Controller
 {
     public const FIELD_LIMIT = 10;
+
+    /**
+     * Ativa / desativa a visibilidade de uma campanha na página pública.
+     * Regra: apenas UMA campanha por usuário pode estar com visivel = 1.
+     */
+    public function toggleVisible(int $id)
+    {
+        $user = auth()->user();
+
+        $campaign = \LeadCampaign::where('user_id', $user->id)->findOrFail($id);
+
+        // Se já está visível, apenas oculta (nenhuma visível)
+        if ((int) $campaign->visivel === 1) {
+            $campaign->visivel = 0;
+            $campaign->save();
+
+            return back()->with('success', 'Formulário ocultado da página pública.');
+        }
+
+        // Se NÃO está visível:
+        // 1) zera todas as campanhas do usuário
+        // 2) marca só esta como visível
+        DB::transaction(function () use ($user, $campaign) {
+            \LeadCampaign::where('user_id', $user->id)->update(['visivel' => 0]);
+            $campaign->visivel = 1;
+            $campaign->save();
+        });
+
+        return back()->with('success', 'Formulário definido como visível na página pública.');
+    }
 
     public function index()
     {
@@ -66,6 +97,7 @@ class Leads01Controller extends Controller
             'description'       => $validated['description'] ?? null,
             'thank_you_message' => $validated['thank_you_message'] ?? null,
             'status'            => $validated['status'],
+            'visivel'           => 0, // nova campanha começa não visível
         ]);
 
         $this->persistFields($campaign, $fields);
@@ -119,12 +151,11 @@ class Leads01Controller extends Controller
     {
         $campaign = $this->findCampaign($id);
 
-        // compatível com a view resources/views/leads01/leads/index.blade.php
-        $leads = $campaign->entries()
+        $entries = $campaign->entries()
             ->latest()
             ->paginate(20);
 
-        return view($this->resolveView('leads.index'), compact('campaign', 'leads'));
+        return view($this->resolveView('leads.index'), compact('campaign', 'entries'));
     }
 
     public function showLead(int $id, int $entryId)
@@ -174,18 +205,17 @@ class Leads01Controller extends Controller
         $rules = [];
         foreach ($campaign->fields as $field) {
             $baseRule = $field->required ? 'required' : 'nullable';
-            // usa o mesmo field_type armazenado no campo
-            $rules['field_' . $field->id] = $baseRule . '|' . $this->fieldRule($field->field_type);
+            $rules['field_' . $field->id] = $baseRule . '|' . $this->fieldRule($field->type);
         }
 
         $validated = $request->validate($rules);
 
         $entry = \LeadEntry::create([
-            'campaign_id' => $campaign->id,
-            'user_id'     => $campaign->user_id,
-            'submitted_at'=> now(),
-            'ip_address'  => $request->ip(),
-            'user_agent'  => (string) $request->header('User-Agent'),
+            'campaign_id'  => $campaign->id,
+            'user_id'      => $campaign->user_id,
+            'submitted_at' => now(),
+            'ip_address'   => $request->ip(),
+            'user_agent'   => (string) $request->header('User-Agent'),
         ]);
 
         foreach ($campaign->fields as $field) {
@@ -210,13 +240,18 @@ class Leads01Controller extends Controller
         ]);
     }
 
+    /**
+     * Validação dos campos do formulário, compatível com _form.blade.php:
+     * - fields[*][label]
+     * - fields[*][field_name] (opcional)
+     * - fields[*][field_type] (text, email, number, tel, textarea, select)
+     * - fields[*][required]
+     * - fields[*][placeholder]
+     * - fields[*][options][] (textarea, linhas separadas por \n)
+     */
     protected function validateFields(Request $request): array
     {
         $fields = $request->input('fields', []);
-
-        if (!is_array($fields)) {
-            return [];
-        }
 
         if (count($fields) > self::FIELD_LIMIT) {
             throw ValidationException::withMessages([
@@ -224,20 +259,12 @@ class Leads01Controller extends Controller
             ]);
         }
 
-        // Tipos permitidos devem bater com o select do _form.blade.php
-        $allowedTypes = ['text', 'textarea', 'email', 'select', 'number', 'tel'];
-
         $validated = [];
 
         foreach ($fields as $index => $field) {
-            if (!is_array($field)) {
-                continue;
-            }
-
             $label       = trim($field['label'] ?? '');
             $fieldName   = trim($field['field_name'] ?? '');
-            $type        = $field['field_type'] ?? '';
-            $required    = (bool) ($field['required'] ?? false);
+            $type        = $field['field_type'] ?? 'text';
             $placeholder = trim($field['placeholder'] ?? '');
 
             if ($label === '') {
@@ -252,57 +279,46 @@ class Leads01Controller extends Controller
                 ]);
             }
 
+            // tipos permitidos de acordo com o select do formulário
+            $allowedTypes = ['text', 'email', 'number', 'tel', 'textarea', 'select'];
             if (!in_array($type, $allowedTypes, true)) {
                 throw ValidationException::withMessages([
                     "fields.$index.field_type" => 'Tipo de campo inválido.',
                 ]);
             }
 
-            // Se não foi definido um nome interno, geramos a partir do rótulo
-            if ($fieldName === '') {
-                $fieldName = Str::slug($label, '_');
-            }
-
-            // Tratamento das opções do select
-            $options    = [];
-            $rawOptions = $field['options'] ?? [];
-
+            // Trata opções do select
+            $options = [];
             if ($type === 'select') {
-                $lines = [];
+                $rawOptions = $field['options'] ?? [];
 
+                // No form, vem como array com 1 posição (textarea)
                 if (is_array($rawOptions)) {
-                    // Pode vir como um array com uma string contendo várias linhas
-                    foreach ($rawOptions as $opt) {
-                        if (is_string($opt)) {
-                            $parts = preg_split("/\r\n|\r|\n/", $opt);
-                            foreach ($parts as $p) {
-                                $lines[] = trim($p);
-                            }
-                        }
-                    }
-                } elseif (is_string($rawOptions)) {
-                    $parts = preg_split("/\r\n|\r|\n/", $rawOptions);
-                    foreach ($parts as $p) {
-                        $lines[] = trim($p);
-                    }
+                    $rawString = implode("\n", $rawOptions);
+                } else {
+                    $rawString = (string) $rawOptions;
                 }
 
-                $options = array_values(array_filter($lines, fn ($v) => $v !== ''));
+                $lines   = preg_split("/[\r\n]+/", $rawString);
+                $options = array_values(array_filter(array_map('trim', $lines)));
 
-                if (count($options) < 2) {
+                if (count($options) < 1) {
                     throw ValidationException::withMessages([
-                        "fields.$index.options" => 'Selecione pelo menos duas opções para o campo select.',
+                        "fields.$index.options" => 'Selecione pelo menos uma opção para o campo select.',
                     ]);
                 }
             }
 
+            // Nome interno: se não veio, gera slug a partir do label
+            $name = $fieldName !== '' ? $fieldName : Str::slug($label, '_');
+
             $validated[] = [
                 'label'       => $label,
-                'field_name'  => $fieldName,
-                'field_type'  => $type,
-                'required'    => $required,
-                'placeholder' => $placeholder,
+                'name'        => $name,
+                'type'        => $type,
+                'required'    => (bool) ($field['required'] ?? false),
                 'sort_order'  => $index + 1,
+                'placeholder' => $placeholder,
                 'options'     => $options,
             ];
         }
@@ -315,26 +331,27 @@ class Leads01Controller extends Controller
         return match ($type) {
             'email'    => 'email|max:255',
             'textarea' => 'string|max:2000',
-            'number'   => 'numeric',
-            'tel'      => 'string|max:20',
             default    => 'string|max:255',
         };
     }
 
+    /**
+     * Usa o alias global \LeadCampaign para evitar problema de namespace.
+     */
     protected function persistFields(\LeadCampaign $campaign, array $fields): void
     {
-        // Remove todos os campos antigos e recria
         $campaign->fields()->delete();
 
         foreach ($fields as $field) {
             $campaign->fields()->create([
-                'label'       => $field['label'],
-                'field_name'  => $field['field_name'],
-                'field_type'  => $field['field_type'],
+                // se sua tabela tiver coluna "label", você pode salvar também:
+                // 'label'       => $field['label'],
+                'name'        => $field['name'],
+                'type'        => $field['type'],
                 'required'    => $field['required'],
-                'placeholder' => $field['placeholder'] ?? null,
                 'sort_order'  => $field['sort_order'],
-                'options'     => $field['options'], // assumindo cast json no Model
+                'options'     => $field['options'],
+                // 'placeholder' => $field['placeholder'] ?? null, // se existir coluna
             ]);
         }
     }

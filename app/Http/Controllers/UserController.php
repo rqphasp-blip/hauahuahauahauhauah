@@ -26,7 +26,6 @@ use App\Models\Link;
 use App\Models\LinkType;
 use App\Models\UserData;
 use App\Models\UsernameHistory;
-use App\Models\UserLeadSettings; // << ATIVADOR LEADS
 use Carbon\Carbon;
 
 
@@ -145,41 +144,18 @@ class UserController extends Controller
         $catalogEnabled = (bool) optional($productSettings)->catalog_enabled;
         $catalogEmbedUrl = $catalogEnabled ? route('products.catalog', ['username' => $userinfo->name, 'embed' => 1]) : null;
 
-        // ATIVADOR DE LEADS (plugin leads01)
+        // LEADS (plugin leads01) usando o campo "visivel"
         $leadsEnabled = false;
         $leadCampaign = null;
 
-        // Se a tabela/configuração de leads existir, respeita o ativador
-        if (class_exists(\App\Models\UserLeadSettings::class) && class_exists('\LeadCampaign')) {
-            $leadSettings = UserLeadSettings::where('user_id', $userinfo->id)->first();
+        if (class_exists('\LeadCampaign')) {
+            $leadCampaign = \LeadCampaign::where('user_id', $userinfo->id)
+                ->where('status', 'active')
+                ->where('visivel', 1)
+                ->with('fields')
+                ->first();
 
-            if ($leadSettings && $leadSettings->leads_enabled) {
-                $leadsEnabled = true;
-
-                $leadQuery = \LeadCampaign::where('user_id', $userinfo->id)
-                    ->where('status', 'active')
-                    ->with('fields');
-
-                if (!empty($leadSettings->default_campaign_id)) {
-                    $leadQuery->where('id', $leadSettings->default_campaign_id);
-                }
-
-                $leadCampaign = $leadQuery->orderBy('id')->first();
-
-                // Se não encontrou nenhuma campanha ativa compatível, desativa a aba
-                if (!$leadCampaign) {
-                    $leadsEnabled = false;
-                }
-            }
-        } else {
-            // Fallback: comportamento antigo (primeira campanha ativa, sem ativador)
-            if (class_exists('\LeadCampaign')) {
-                $leadCampaign = \LeadCampaign::where('user_id', $userinfo->id)
-                    ->where('status', 'active')
-                    ->with('fields')
-                    ->first();
-                $leadsEnabled = (bool) $leadCampaign;
-            }
+            $leadsEnabled = (bool) $leadCampaign;
         }
 
         // Aba ativa: links (default), catalog, leads
@@ -260,34 +236,14 @@ class UserController extends Controller
         $leadsEnabled = false;
         $leadCampaign = null;
 
-        if (class_exists(\App\Models\UserLeadSettings::class) && class_exists('\LeadCampaign')) {
-            $leadSettings = UserLeadSettings::where('user_id', $userinfo->id)->first();
+        if (class_exists('\LeadCampaign')) {
+            $leadCampaign = \LeadCampaign::where('user_id', $userinfo->id)
+                ->where('status', 'active')
+                ->where('visivel', 1)
+                ->with('fields')
+                ->first();
 
-            if ($leadSettings && $leadSettings->leads_enabled) {
-                $leadsEnabled = true;
-
-                $leadQuery = \LeadCampaign::where('user_id', $userinfo->id)
-                    ->where('status', 'active')
-                    ->with('fields');
-
-                if (!empty($leadSettings->default_campaign_id)) {
-                    $leadQuery->where('id', $leadSettings->default_campaign_id);
-                }
-
-                $leadCampaign = $leadQuery->orderBy('id')->first();
-
-                if (!$leadCampaign) {
-                    $leadsEnabled = false;
-                }
-            }
-        } else {
-            if (class_exists('\LeadCampaign')) {
-                $leadCampaign = \LeadCampaign::where('user_id', $userinfo->id)
-                    ->where('status', 'active')
-                    ->with('fields')
-                    ->first();
-                $leadsEnabled = (bool) $leadCampaign;
-            }
+            $leadsEnabled = (bool) $leadCampaign;
         }
 
         $activeTab = $request->query('tab', 'links');
