@@ -17,7 +17,7 @@
 
     <form action="{{ route('leads01.store') }}" method="POST">
         @csrf
-        @include('leads01::_form')
+       @include('leads01._form')
     </form>
 </div>
 @endsection

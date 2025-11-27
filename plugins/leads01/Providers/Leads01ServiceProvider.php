@@ -8,12 +8,12 @@ class Leads01ServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Garante que o controller na pasta app esteja disponível como nos demais plugins.
+        // Garante que o controller na pasta app esteja disponível
         if (!class_exists(\App\Providers\plugins\leads01\Leads01Controller::class)) {
             require_once base_path('app/Providers/plugins/leads01/Leads01Controller.php');
         }
 
-		  // Alias para compatibilidade com a assinatura usada em rotas e views antigas (plugins\leads01\Http\Controllers).
+        // Cria alias ANTES de qualquer outra coisa
         if (!class_exists('plugins\\leads01\\Http\\Controllers\\Leads01Controller')) {
             class_alias(
                 \App\Providers\plugins\leads01\Leads01Controller::class,
@@ -21,9 +21,6 @@ class Leads01ServiceProvider extends ServiceProvider
             );
         }
 
-		
-		
-		
         $this->app->bind('leads01.controller', function () {
             return $this->app->make(\App\Providers\plugins\leads01\Leads01Controller::class);
         });
@@ -31,7 +28,8 @@ class Leads01ServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-         if (file_exists(base_path('plugins/leads01/routes.php'))) {
+        // Carrega rotas DEPOIS do register
+        if (file_exists(base_path('plugins/leads01/routes.php'))) {
             $this->loadRoutesFrom(base_path('plugins/leads01/routes.php'));
         }
         $this->loadViewsFrom(base_path('plugins/leads01/resources/views'), 'leads01');

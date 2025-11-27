@@ -295,14 +295,48 @@ class LinktreeImportController extends Controller
 
     protected function buildIconLink(string $icon, string $href): array
     {
+        // Remove o prefixo 'fa-' apenas se existir no início
+        $iconName = (strpos($icon, 'fa-') === 0) ? substr($icon, 3) : $icon;
+        
+        // Converte o código do ícone para nome amigável
+        $friendlyName = $this->getIconFriendlyName($iconName);
+        
         return [
-            'title' => $icon,
+            'title' => $friendlyName,
             'url' => $href,
             'thumbnail' => null,
             'type' => 'custom',
             'button_id' => $this->socialIconButtonId(),
-            'custom_icon' => 'fa-brands fa-' . ltrim($icon, 'fa-'),
+            'custom_icon' => 'fa-brands fa-' . $iconName,
         ];
+    }
+
+    protected function getIconFriendlyName(string $iconCode): string
+    {
+        $friendlyNames = [
+            'facebook' => 'Facebook',
+            'facebook' => 'Facebook',
+            'instagram' => 'Instagram',
+            'tiktok' => 'TikTok',
+            'twitter' => 'X',
+            'youtube' => 'YouTube',
+            'whatsapp' => 'WhatsApp',
+            'telegram' => 'Telegram',
+            'spotify' => 'Spotify',
+            'threads' => 'Threads',
+            'linkedin' => 'LinkedIn',
+            'github' => 'GitHub',
+            'twitch' => 'Twitch',
+            'discord' => 'Discord',
+            'amazon' => 'Amazon',
+            'patreon' => 'Patreon',
+            'store' => 'Loja',
+            'bag-shopping' => 'Loja',
+            'star' => 'OnlyFans',
+            'user-lock' => 'Privacy',
+        ];
+
+        return $friendlyNames[$iconCode] ?? ucfirst($iconCode);
     }
 
     protected function prepareLinkFromArray(array $link): ?array
@@ -369,63 +403,40 @@ class LinktreeImportController extends Controller
 
     protected function getLastImportMetadata(int $userId): ?array
     {
+        // UserData::getData() já retorna array decodificado
         $data = UserData::getData($userId, 'profile_import');
 
         if (empty($data) || $data === 'null') {
             $data = UserData::getData($userId, 'linktree_import');
         }
 
-        if (is_string($data) && $data !== 'null') {
-            $decoded = json_decode($data, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $data = $decoded;
+        if (empty($data) || $data === 'null' || !is_array($data)) {
+            // Tenta reconstruir a partir dos links no banco
+            $rebuilt = $this->reconstructLastImportFromLinks($userId);
+            
+            if ($rebuilt) {
+                $this->rememberLastImport($userId, $rebuilt);
+                return $rebuilt;
             }
-        }
-
-        if (empty($data) || $data === 'null') {
+            
             return null;
         }
 
-        if (is_object($data)) {
-            $data = json_decode(json_encode($data), true);
+        // Verifica se os dados estão completos
+        if (!empty($data['links']) && !empty($data['import_batch_id'])) {
+            return $data;
         }
 
-        if (isset($data['links']) && is_string($data['links'])) {
-            $linksDecoded = json_decode($data['links'], true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $data['links'] = $linksDecoded;
-            }
-        }
-
-        if (isset($data['links']) && is_object($data['links'])) {
-            $data['links'] = json_decode(json_encode($data['links']), true);
-        }
-
-        if (isset($data['headings']) && is_string($data['headings'])) {
-            $headingsDecoded = json_decode($data['headings'], true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $data['headings'] = $headingsDecoded;
-            }
-        }
-
-        if (is_array($data) && ! empty($data)) {
-            $needsRebuild = empty($data['links']) || empty($data['import_batch_id']);
-
-            if (! $needsRebuild) {
-                return $data;
-            }
-        }
-
+        // Se estiver incompleto, tenta reconstruir e mesclar
         $rebuilt = $this->reconstructLastImportFromLinks($userId);
 
         if ($rebuilt) {
-            $merged = is_array($data) ? array_merge($rebuilt, array_filter($data)) : $rebuilt;
+            $merged = array_merge($rebuilt, array_filter($data));
             $this->rememberLastImport($userId, $merged);
-
             return $merged;
         }
 
-        return is_array($data) ? $data : null;
+        return $data;
     }
 
     protected function reconstructLastImportFromLinks(int $userId): ?array
@@ -621,7 +632,7 @@ class LinktreeImportController extends Controller
             'youtu.be' => 'youtube',
             'twitter.com' => 'twitter',
             'x.com' => 'twitter',
-            'facebook.com' => 'facebook-f',
+            'facebook.com' => 'facebook',
             'wa.me' => 'whatsapp',
             'whatsapp.com' => 'whatsapp',
             't.me' => 'telegram',
@@ -787,7 +798,7 @@ class LinktreeImportController extends Controller
         $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $normalized = mb_convert_encoding($decoded, 'UTF-8', 'UTF-8, ISO-8859-1');
 
-        return trim(str_ireplace('linktree', '', $normalized));
+        return trim(preg_replace('/\blinktree\b/i', '', $normalized));
     }
 
     protected function shouldSkipLink(?string $title, ?string $url): bool

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use plugins\leads01\Http\Controllers\Leads01Controller;
+use App\Providers\plugins\leads01\Leads01Controller;
 
 Route::prefix('leads01')
     ->name('leads01.')

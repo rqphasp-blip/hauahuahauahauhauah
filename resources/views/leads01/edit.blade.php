@@ -18,7 +18,7 @@
     <form action="{{ route('leads01.update', $campaign->id) }}" method="POST">
         @csrf
         @method('PUT')
-        @include('leads01::_form', ['campaign' => $campaign, 'fields' => $fields ?? []])
+        @include('leads01._form', ['campaign' => $campaign, 'fields' => $fields ?? []])
     </form>
 </div>
 @endsection

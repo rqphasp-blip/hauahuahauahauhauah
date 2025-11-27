@@ -9,30 +9,51 @@ class Leads01ServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind('App\\Providers\\plugins\\leads01\\Leads01Controller', function ($app) {
+        // Carrega os Models manualmente (ordem importa por causa dos relacionamentos)
+        $modelsPath = base_path('plugins/leads01/Models');
+        $models = ['LeadField', 'LeadEntry', 'LeadCampaign'];
+        
+        foreach ($models as $model) {
+            $modelClass = "plugins\\leads01\\Models\\{$model}";
+            if (!class_exists($modelClass)) {
+                require_once "{$modelsPath}/{$model}.php";
+            }
+        }
+
+        // Garante que o controller esteja disponível
+        if (!class_exists(\App\Providers\plugins\leads01\Leads01Controller::class)) {
+            require_once base_path('app/Providers/plugins/leads01/Leads01Controller.php');
+        }
+
+        // Cria alias para compatibilidade com namespace antigo
+        if (!class_exists('plugins\\leads01\\Http\\Controllers\\Leads01Controller')) {
+            class_alias(
+                \App\Providers\plugins\leads01\Leads01Controller::class,
+                'plugins\\leads01\\Http\\Controllers\\Leads01Controller'
+            );
+        }
+
+        $this->app->bind(\App\Providers\plugins\leads01\Leads01Controller::class, function ($app) {
             return new \App\Providers\plugins\leads01\Leads01Controller();
         });
     }
 
     public function boot(): void
     {
-         if (file_exists(base_path('plugins/leads01/routes.php'))) {
-            $this->loadRoutesFrom(base_path('plugins/leads01/routes.php'));
-        }
-        $this->loadViewsFrom(base_path('plugins/leads01/resources/views'), 'leads01');
-        $this->loadMigrationsFrom(base_path('plugins/leads01/database/migrations'));
+        $pluginPath = base_path('plugins/leads01');
+
+        $this->loadRoutesFrom($pluginPath . '/routes/web.php');
+
+        View::addNamespace('leads01', $pluginPath . '/views');
 
         $this->publishes([
-            base_path('plugins/leads01/resources/views') => resource_path('views/leads01'),
+            $pluginPath . '/views' => resource_path('views/leads01'),
         ], 'leads01-views');
 
-        $this->publishes([
-            base_path('plugins/leads01/database/migrations') => database_path('migrations'),
-        ], 'leads01-migrations');
+        $this->loadMigrationsFrom($pluginPath . '/database/migrations');
 
-            $this->publishes([
-                $pluginPath . '/database/migrations/2024_01_01_000000_create_lead_capture_tables.php' => database_path('migrations/' . date('Y_m_d_His') . '_create_lead_capture_tables.php'),
-            ], 'leads01-migrations');
-        }
+        $this->publishes([
+            $pluginPath . '/database/migrations' => database_path('migrations'),
+        ], 'leads01-migrations');
     }
 }

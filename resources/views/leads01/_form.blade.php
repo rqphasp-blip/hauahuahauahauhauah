@@ -28,7 +28,7 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
             <div>
                 <h2 class="h5 mb-0">Campos do formulário</h2>
-                <small class="text-muted">Cadastre até {{ \plugins\leads01\Http\Controllers\Leads01Controller::FIELD_LIMIT }} campos personalizados. Use campos do tipo "select" quando precisar de opções.</small>
+                <small class="text-muted">Cadastre até {{ \App\Providers\plugins\leads01\Leads01Controller::FIELD_LIMIT }} campos personalizados. Use campos do tipo "select" quando precisar de opções.</small>
             </div>
             <button type="button" class="btn btn-sm btn-outline-primary" id="add-field">Adicionar campo</button>
         </div>
@@ -111,7 +111,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const wrapper = document.getElementById('fields-wrapper');
         const addBtn = document.getElementById('add-field');
-        const limit = {{ \plugins\leads01\Http\Controllers\Leads01Controller::FIELD_LIMIT }};
+        const limit = {{ \App\Providers\plugins\leads01\Leads01Controller::FIELD_LIMIT }};
 
         const refreshVisibility = () => {
             wrapper.querySelectorAll('.field-item').forEach(card => {
@@ -133,19 +133,47 @@
             if (event.target.classList.contains('remove-field')) {
                 const card = event.target.closest('.field-item');
                 if (card) {
+
                     card.remove();
+                    // Reindexar após a remoção
+                    wrapper.querySelectorAll('.field-item').forEach((item, i) => {
+                        item.setAttribute('data-index', i);
+                        item.querySelector('strong').textContent = 'Campo #' + (i + 1);
+                        // Atualizar todos os atributos name
+                        item.querySelectorAll('[name^="fields["]').forEach(input => {
+                            const oldName = input.getAttribute('name');
+                            const newName = oldName.replace(/fields\[\d+\]/, `fields[${i}]`);
+                            input.setAttribute('name', newName);
+                        });
+                    });
                 }
             }
         });
 
         addBtn.addEventListener('click', () => {
             const current = wrapper.querySelectorAll('.field-item').length;
+            wrapper.querySelectorAll('.field-item').forEach((item, i) => {
+                item.setAttribute('data-index', i);
+                item.querySelector('strong').textContent = 'Campo #' + (i + 1);
+            });
             if (current >= limit) {
                 alert('Você atingiu o limite de ' + limit + ' campos.');
                 return;
             }
 
             const index = current;
+            
+            // Reindexar os campos existentes antes de adicionar o novo
+            wrapper.querySelectorAll('.field-item').forEach((item, i) => {
+                item.setAttribute('data-index', i);
+                item.querySelector('strong').textContent = 'Campo #' + (i + 1);
+                // Atualizar todos os atributos name
+                item.querySelectorAll('[name^="fields["]').forEach(input => {
+                    const oldName = input.getAttribute('name');
+                    const newName = oldName.replace(/fields\[\d+\]/, `fields[${i}]`);
+                    input.setAttribute('name', newName);
+                });
+            });
             const template = `
                 <div class="card mb-3 field-item" data-index="${index}">
                     <div class="card-body">

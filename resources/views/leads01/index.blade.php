@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="h3 mb-0">Minhas Campanhas de Leads</h1>
-            <p class="text-muted mb-0">Gerencie formulários de captação com até {{ \plugins\leads01\Http\Controllers\Leads01Controller::FIELD_LIMIT }} campos por campanha.</p>
+            <p class="text-muted mb-0">Gerencie formulários de captação com até {{ \App\Providers\plugins\leads01\Leads01Controller::FIELD_LIMIT }} campos por campanha.</p>
         </div>
         <a href="{{ route('leads01.create') }}" class="btn btn-primary">Nova campanha</a>
     </div>
