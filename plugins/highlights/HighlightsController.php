@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Providers\plugins\highlights;
+namespace plugins\highlights;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;

@@ -26,7 +26,7 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('leads01.submit', $campaign->slug) }}">
+                    <form method="POST" action="{{ route('leads01.public.submit', $campaign->slug) }}">
                         @csrf
 
                         @foreach($fields as $field)

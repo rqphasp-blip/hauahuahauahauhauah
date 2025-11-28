@@ -1,7 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Providers\plugins\highlights\HighlightsController;
+use plugins\highlights\HighlightsController;
+
+if (!class_exists(HighlightsController::class)) {
+    require_once base_path('plugins/highlights/HighlightsController.php');
+}
 
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/highlights', [HighlightsController::class, 'index'])->name('highlights.index');

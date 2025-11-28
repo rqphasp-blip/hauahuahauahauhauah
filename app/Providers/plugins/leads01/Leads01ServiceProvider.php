@@ -20,6 +20,13 @@ class Leads01ServiceProvider extends ServiceProvider
             }
         }
 
+		
+		  // Garante alias globais (\\LeadCampaign, etc.) para uso em outros controllers
+            $globalAlias = "\\{$model}";
+            if (!class_exists($globalAlias, false)) {
+                class_alias($modelClass, $globalAlias);
+            }
+		
         // Garante que o controller esteja disponível
         if (!class_exists(\App\Providers\plugins\leads01\Leads01Controller::class)) {
             require_once base_path('app/Providers/plugins/leads01/Leads01Controller.php');

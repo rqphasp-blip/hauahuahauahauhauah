@@ -75,12 +75,12 @@ class Leads01Controller extends Controller
             ->latest()
             ->paginate(15);
 
-        return view($this->resolveView('index'), compact('campaigns'));
+        return $this->renderView('index', compact('campaigns'));
     }
 
     public function create()
     {
-        return view($this->resolveView('create'));
+        return $this->renderView('create');
     }
 
     public function store(Request $request)
@@ -110,7 +110,7 @@ class Leads01Controller extends Controller
     {
         $campaign = $this->findCampaign($id);
 
-        return view($this->resolveView('edit'), [
+        return $this->renderView('edit', [
             'campaign' => $campaign,
             'fields'   => $campaign->fields()->orderBy('sort_order')->get(),
         ]);
@@ -155,7 +155,7 @@ class Leads01Controller extends Controller
             ->latest()
             ->paginate(20);
 
-        return view($this->resolveView('leads.index'), compact('campaign', 'entries'));
+        return $this->renderView('leads.index', compact('campaign', 'entries'));
     }
 
     public function showLead(int $id, int $entryId)
@@ -166,7 +166,7 @@ class Leads01Controller extends Controller
             ->with('fields')
             ->findOrFail($entryId);
 
-        return view($this->resolveView('leads.show'), [
+        return $this->renderView('leads.show', [
             'campaign' => $campaign,
             'entry'    => $entry,
         ]);
@@ -182,17 +182,20 @@ class Leads01Controller extends Controller
             ->latest()
             ->get();
 
-        return view($this->resolveView('public.list'), compact('user', 'campaigns'));
+        return $this->renderView('public.list', compact('user', 'campaigns'));
     }
 
     public function publicForm(string $slug)
     {
         $campaign = \LeadCampaign::where('slug', $slug)
             ->where('status', 'active')
-            ->with('fields')
             ->firstOrFail();
 
-        return view($this->resolveView('public.form'), compact('campaign'));
+        $fields = $campaign->fields()
+            ->orderBy('sort_order')
+            ->get();
+
+        return $this->renderView('public.form', compact('campaign', 'fields'));
     }
 
     public function submit(Request $request, string $slug)
@@ -204,30 +207,72 @@ class Leads01Controller extends Controller
 
         $rules = [];
         foreach ($campaign->fields as $field) {
-            $baseRule = $field->required ? 'required' : 'nullable';
-            $rules['field_' . $field->id] = $baseRule . '|' . $this->fieldRule($field->type);
+            $baseRule   = $field->required ? 'required' : 'nullable';
+            $fieldType  = $field->field_type ?? $field->type ?? 'text';
+            $rules['field_' . $field->id] = $baseRule . '|' . $this->fieldRule($fieldType);
         }
 
         $validated = $request->validate($rules);
 
-        $entry = \LeadEntry::create([
-            'campaign_id'  => $campaign->id,
-            'user_id'      => $campaign->user_id,
-            'submitted_at' => now(),
-            'ip_address'   => $request->ip(),
-            'user_agent'   => (string) $request->header('User-Agent'),
-        ]);
-
+        $entryData = [];
         foreach ($campaign->fields as $field) {
-            $entry->fields()->create([
-                'lead_field_id' => $field->id,
-                'value'         => $validated['field_' . $field->id] ?? null,
-            ]);
+            $key = $field->field_name
+                ?? ($field->name ?? ('field_' . $field->id));
+
+            $entryData[$key] = $validated['field_' . $field->id] ?? null;
         }
 
+        \LeadEntry::create([
+            'campaign_id' => $campaign->id,
+            'user_id'     => $campaign->user_id,
+            'data'        => $entryData,
+            'ip_address'  => $request->ip(),
+            'user_agent'  => (string) $request->header('User-Agent'),
+        ]);
+
         return redirect()
-            ->route('leads01.form', $campaign->slug)
+            ->route('leads01.public.form', $campaign->slug)
             ->with('success', $campaign->thank_you_message ?: 'Obrigado pelo envio.');
+    }
+
+    public function saveFields(Request $request, int $id)
+    {
+        $campaign = $this->findCampaign($id);
+
+        $incoming = $request->input('fields', []);
+
+        if (!is_array($incoming) || count($incoming) === 0) {
+            return response()->json([
+                'errors' => ['fields' => 'Envie pelo menos um campo para salvar.'],
+            ], 422);
+        }
+
+        $normalized = [];
+        foreach ($incoming as $field) {
+            $fieldType = strtolower((string) ($field['field_type'] ?? ($field['type'] ?? 'text')));
+
+            $normalized[] = [
+                'label'       => trim((string) ($field['label'] ?? '')),
+                'field_name'  => trim((string) ($field['field_name'] ?? ($field['name'] ?? ''))),
+                'field_type'  => $fieldType,
+                'required'    => (bool) ($field['required'] ?? false),
+                'placeholder' => trim((string) ($field['placeholder'] ?? '')),
+                'options'     => $this->normalizeOptions($field['options'] ?? [], $fieldType),
+                'sort_order'  => $field['sort_order'] ?? $field['order'] ?? null,
+            ];
+        }
+
+        $request->replace(['fields' => $normalized]);
+
+        try {
+            $fields = $this->validateFields($request);
+        } catch (ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        }
+
+        $this->persistFields($campaign, $fields);
+
+        return response()->json(['message' => 'Campos salvos com sucesso.']);
     }
 
     protected function validateCampaign(Request $request, ?int $campaignId = null): array
@@ -253,6 +298,19 @@ class Leads01Controller extends Controller
     {
         $fields = $request->input('fields', []);
 
+        if (!is_array($fields)) {
+            $fields = [];
+        }
+
+        // Ordena pelo sort_order/order caso venha do formulário em JSON
+        $fields = array_values($fields);
+        usort($fields, function ($a, $b) {
+            $aOrder = (int) ($a['sort_order'] ?? $a['order'] ?? 0);
+            $bOrder = (int) ($b['sort_order'] ?? $b['order'] ?? 0);
+
+            return $aOrder <=> $bOrder;
+        });
+
         if (count($fields) > self::FIELD_LIMIT) {
             throw ValidationException::withMessages([
                 'fields' => 'Você excedeu o limite de ' . self::FIELD_LIMIT . ' campos.',
@@ -264,7 +322,7 @@ class Leads01Controller extends Controller
         foreach ($fields as $index => $field) {
             $label       = trim($field['label'] ?? '');
             $fieldName   = trim($field['field_name'] ?? '');
-            $type        = $field['field_type'] ?? 'text';
+            $type        = strtolower((string) ($field['field_type'] ?? ($field['type'] ?? 'text')));
             $placeholder = trim($field['placeholder'] ?? '');
 
             if ($label === '') {
@@ -288,36 +346,25 @@ class Leads01Controller extends Controller
             }
 
             // Trata opções do select
-            $options = [];
-            if ($type === 'select') {
-                $rawOptions = $field['options'] ?? [];
+            $options = $this->normalizeOptions($field['options'] ?? [], $type);
 
-                // No form, vem como array com 1 posição (textarea)
-                if (is_array($rawOptions)) {
-                    $rawString = implode("\n", $rawOptions);
-                } else {
-                    $rawString = (string) $rawOptions;
-                }
-
-                $lines   = preg_split("/[\r\n]+/", $rawString);
-                $options = array_values(array_filter(array_map('trim', $lines)));
-
-                if (count($options) < 1) {
-                    throw ValidationException::withMessages([
-                        "fields.$index.options" => 'Selecione pelo menos uma opção para o campo select.',
-                    ]);
-                }
+            if ($type === 'select' && count($options) < 1) {
+                throw ValidationException::withMessages([
+                    "fields.$index.options" => 'Selecione pelo menos uma opção para o campo select.',
+                ]);
             }
 
             // Nome interno: se não veio, gera slug a partir do label
             $name = $fieldName !== '' ? $fieldName : Str::slug($label, '_');
+
+            $sortOrder = (int) ($field['sort_order'] ?? $field['order'] ?? ($index + 1));
 
             $validated[] = [
                 'label'       => $label,
                 'name'        => $name,
                 'type'        => $type,
                 'required'    => (bool) ($field['required'] ?? false),
-                'sort_order'  => $index + 1,
+                'sort_order'  => $sortOrder,
                 'placeholder' => $placeholder,
                 'options'     => $options,
             ];
@@ -326,10 +373,32 @@ class Leads01Controller extends Controller
         return $validated;
     }
 
-    protected function fieldRule(string $type): string
+    protected function normalizeOptions($rawOptions, ?string $type = null): array
     {
-        return match ($type) {
+        if (($type ?? '') !== 'select') {
+            return [];
+        }
+
+        if (is_array($rawOptions)) {
+            $rawString = implode("\n", $rawOptions);
+        } else {
+            $rawString = (string) $rawOptions;
+        }
+
+        $lines   = preg_split("/[\r\n]+/", $rawString);
+        $options = array_values(array_filter(array_map('trim', $lines)));
+
+        return $options;
+    }
+
+    protected function fieldRule(?string $type): string
+    {
+        $normalized = strtolower($type ?: 'text');
+
+        return match ($normalized) {
             'email'    => 'email|max:255',
+            'number'   => 'numeric',
+            'tel'      => 'string|max:30',
             'textarea' => 'string|max:2000',
             default    => 'string|max:255',
         };
@@ -344,14 +413,13 @@ class Leads01Controller extends Controller
 
         foreach ($fields as $field) {
             $campaign->fields()->create([
-                // se sua tabela tiver coluna "label", você pode salvar também:
-                // 'label'       => $field['label'],
-                'name'        => $field['name'],
-                'type'        => $field['type'],
+                'label'       => $field['label'],
+                'field_name'  => $field['name'],
+                'field_type'  => $field['type'],
                 'required'    => $field['required'],
                 'sort_order'  => $field['sort_order'],
                 'options'     => $field['options'],
-                // 'placeholder' => $field['placeholder'] ?? null, // se existir coluna
+                'placeholder' => $field['placeholder'] ?: null,
             ]);
         }
     }
@@ -379,8 +447,37 @@ class Leads01Controller extends Controller
             ->findOrFail($id);
     }
 
-    protected function resolveView(string $view): string
+    protected function renderView(string $view, array $data = [])
     {
-        return view()->exists("leads01.$view") ? "leads01.$view" : "leads01::$view";
+        foreach ($this->viewCandidates($view) as $candidate) {
+            if (view()->exists($candidate)) {
+                return view($candidate, $data);
+            }
+        }
+
+        $paths = [
+            resource_path('views/' . str_replace('.', '/', $view) . '.blade.php'),
+            resource_path('views/leads01/' . str_replace('.', '/', $view) . '.blade.php'),
+            base_path('plugins/leads01/resources/views/' . str_replace('.', '/', $view) . '.blade.php'),
+            base_path('plugins/leads01/views/' . str_replace('.', '/', $view) . '.blade.php'),
+        ];
+
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                return view()->file($path, $data);
+            }
+        }
+
+        abort(404, "View [{$view}] not found for leads01.");
+    }
+
+    protected function viewCandidates(string $view): array
+    {
+        return [
+            "leads01.$view",
+            "leads01::{$view}",
+            "leads01::$view",
+            $view,
+        ];
     }
 }

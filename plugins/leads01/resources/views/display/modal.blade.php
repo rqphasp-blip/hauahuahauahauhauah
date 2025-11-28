@@ -17,7 +17,7 @@
             </div>
             <div class="modal-body">
                 <div class="lead-capture-feedback alert alert-success d-none" role="alert"></div>
-                <form class="lead-capture-form" data-action="{{ route('leads01.submit', $campaign) }}">
+                <form class="lead-capture-form" data-action="{{ route('leads01.public.submit', $campaign) }}">
                     @csrf
                     @foreach($fields as $field)
                         @php

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Providers\plugins\highlights\Providers;
+namespace plugins\highlights\Providers;
 
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -9,8 +9,14 @@ class HighlightsServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        $this->app->bind(\App\Providers\plugins\highlights\HighlightsController::class, function ($app) {
-            return new \App\Providers\plugins\highlights\HighlightsController();
+    require_once __DIR__ . '/../HighlightsController.php';
+
+       if (!class_exists(\plugins\highlights\HighlightsController::class)) {
+            require_once base_path('plugins/highlights/HighlightsController.php');
+        }
+
+        $this->app->bind(\plugins\highlights\HighlightsController::class, function ($app) {
+            return new \plugins\highlights\HighlightsController();
         });
     }
 

@@ -15,7 +15,7 @@
                             <h5 class="card-title">{{ $campaign->name }}</h5>
                             <p class="card-text text-muted">{{ $campaign->description }}</p>
                             <div class="mt-auto">
-                                <a href="{{ route('leads01.form', $campaign->slug) }}" class="btn btn-primary">Abrir formulário</a>
+                                <a href="{{ route('leads01.public.form', $campaign->slug) }}" class="btn btn-primary">Abrir formulário</a>
                             </div>
                         </div>
                     </div>

@@ -19,6 +19,6 @@ Route::middleware(['web', 'auth'])->prefix('leads01')->name('leads01.')->group(f
 });
 
 Route::middleware('web')->group(function () {
-    Route::get('/leads01/form/{slug}', [Leads01Controller::class, 'display'])->name('leads01.display');
-    Route::post('/leads01/form/{slug}', [Leads01Controller::class, 'submit'])->name('leads01.submit');
+Route::get('/leads01/form/{slug}', [Leads01Controller::class, 'display'])->name('leads01.public.form');
+    Route::post('/leads01/form/{slug}', [Leads01Controller::class, 'submit'])->name('leads01.public.submit');
 });
